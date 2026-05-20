@@ -1,0 +1,6 @@
+﻿  stdafx.cpp
+  dllmain.cpp
+  ZeroCrossSim_FixedPoint.cpp
+C:\Data\Python\PythonProjects\ZeroCrossing_Simulation\ZeroCrossSim_FixedPoint\ZeroCrossSim_FixedPoint\ZeroCrossSim_FixedPoint.cpp(123,9): warning C4101: 'tempS32_2': unreferenced local variable
+     Creating library C:\Data\Python\PythonProjects\ZeroCrossing_Simulation\ZeroCrossSim_FixedPoint\Debug\ZeroCrossSim_FixedPoint.lib and object C:\Data\Python\PythonProjects\ZeroCrossing_Simulation\ZeroCrossSim_FixedPoint\Debug\ZeroCrossSim_FixedPoint.exp
+  ZeroCrossSim_FixedPoint.vcxproj -> C:\Data\Python\PythonProjects\ZeroCrossing_Simulation\ZeroCrossSim_FixedPoint\Debug\ZeroCrossSim_FixedPoint.dll

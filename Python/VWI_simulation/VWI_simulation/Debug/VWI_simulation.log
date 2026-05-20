@@ -1,0 +1,25 @@
+﻿  Source.cpp
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(6,33): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(6,16): error C2146: syntax error: missing ';' before identifier 'ActivePower__Init'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(6,41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(6,41): error C2146: syntax error: missing ')' before identifier 'input'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(7,40): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(7,16): error C2146: syntax error: missing ';' before identifier 'ActivePower__FastHandler'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(7,48): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(7,48): error C2146: syntax error: missing ')' before identifier 'input'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(11,33): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(11,16): error C2146: syntax error: missing ';' before identifier 'ActivePower__Init'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(11,41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(11,16): error C2374: 'ActivePower__Init': redefinition; multiple initialization
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(6): message : see declaration of 'ActivePower__Init'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(11,41): error C2146: syntax error: missing ')' before identifier 'input'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(12,1): error C2143: syntax error: missing ';' before '{'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(12,1): error C2447: '{': missing function header (old-style formal list?)
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(19,40): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(19,16): error C2146: syntax error: missing ';' before identifier 'ActivePower__FastHandler'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(19,48): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(19,16): error C2374: 'ActivePower__FastHandler': redefinition; multiple initialization
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(7): message : see declaration of 'ActivePower__FastHandler'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(19,48): error C2146: syntax error: missing ')' before identifier 'input'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(20,1): error C2143: syntax error: missing ';' before '{'
+C:\Data\Python\PythonProjects\VWI_simulation\VWI_simulation\Source.cpp(20,1): error C2447: '{': missing function header (old-style formal list?)

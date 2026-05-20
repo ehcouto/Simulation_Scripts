@@ -1,0 +1,10 @@
+﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(392,5): warning MSB8028: The intermediate directory (Debug\) contains files shared from another project (ZeroCrossSim.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  ZeroCrossSim_float.cpp
+c:\data\projects\python_projects\zerocrossing_simulation\dll\zerocrosssim\zerocrosssim\mcizerocross_prv.h(8): warning C4838: conversion from 'double' to 'const float' requires a narrowing conversion
+c:\data\projects\python_projects\zerocrossing_simulation\dll\zerocrosssim\zerocrosssim\mcizerocross_prv.h(8): warning C4305: 'initializing': truncation from 'double' to 'const float'
+c:\data\projects\python_projects\zerocrossing_simulation\dll\zerocrosssim\zerocrosssim\mcizerocross_prv.h(16): warning C4838: conversion from 'double' to 'const float' requires a narrowing conversion
+c:\data\projects\python_projects\zerocrossing_simulation\dll\zerocrosssim\zerocrosssim\mcizerocross_prv.h(16): warning C4305: 'initializing': truncation from 'double' to 'const float'
+c:\data\projects\python_projects\zerocrossing_simulation\dll\zerocrosssim\zerocrosssim\zerocrosssim_float.cpp(98): warning C4101: 'tempf_2': unreferenced local variable
+     Creating library C:\Data\Projects\Python_Projects\ZeroCrossing_Simulation\DLL\ZeroCrossSim\Debug\ZeroCrossSim_float.lib and object C:\Data\Projects\Python_Projects\ZeroCrossing_Simulation\DLL\ZeroCrossSim\Debug\ZeroCrossSim_float.exp
+  ZeroCrossSim.vcxproj -> C:\Data\Projects\Python_Projects\ZeroCrossing_Simulation\DLL\ZeroCrossSim\Debug\ZeroCrossSim_float.dll
+  ZeroCrossSim.vcxproj -> C:\Data\Projects\Python_Projects\ZeroCrossing_Simulation\DLL\ZeroCrossSim\Debug\ZeroCrossSim_float.pdb (Full PDB)

@@ -1,0 +1,7 @@
+﻿  stdafx.cpp
+  dllmain.cpp
+  Gpio.cpp
+  MciZeroCross_dll.cpp
+  MciZeroCross.cpp
+  Generating Code...
+LINK : fatal error LNK1168: cannot open C:\Data\Projects\PythonProjects\ZeroCrossing_Simulation\DLL\MciZeroCross\Debug\MciZeroCross.dll for writing
