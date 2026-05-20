@@ -8,5 +8,5 @@ Initial Release:
 Version: 1.1
 Added FOC Simulation used to support DEA802 development.
 
-Version 1.2
+Version: 1.2
 Created C_Library with C code designed for PMSM Motor Simulation using 4th Order Runge Kutta. 
