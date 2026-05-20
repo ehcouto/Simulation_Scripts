@@ -5,6 +5,8 @@ Here we can find Python & Matlab simulations developed by myself used to support
 Version: 1.0
 Initial Release:
 
-
-Version 1.1
+Version: 1.1
 Added FOC Simulation used to support DEA802 development.
+
+Version 1.2
+Created C_Library with C code designed for PMSM Motor Simulation using 4th Order Runge Kutta. 

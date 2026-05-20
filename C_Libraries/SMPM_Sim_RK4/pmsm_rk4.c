@@ -24,7 +24,7 @@
  (((value) >= (lim_sup)) ? (lim_sup) : ( ((value) <= (lim_inf)) ? (lim_inf) : (value) ))            \
 
 #define TWO_PI         (2.0f * PMSM_PI)
-#define SW_FREQ        7550.0f
+#define SW_FREQ        8000.0f
 
 /* Initalize prototypes */
 PMSMParams Motor0;
