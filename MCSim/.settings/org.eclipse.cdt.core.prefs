@@ -1,0 +1,6 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.1928937471/RM/delimiter=;
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.1928937471/RM/operation=replace
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.1928937471/RM/value=D\:\\Tools\\MSYS\\usr\\bin\\rm.exe -rf
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.1928937471/append=true
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.1928937471/appendContributed=true
