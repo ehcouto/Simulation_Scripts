@@ -378,12 +378,18 @@ class App:
             vv = tk.StringVar(value=fmt.format(init))
             tk.Label(frm, textvariable=vv, bg=PANEL_BG, fg=ACCENT,
                      font=("Segoe UI", 8), width=7).pack(side=tk.RIGHT)
+            def _on_slider(v, vv=vv, f=fmt, c=cmd):
+                fv = float(v)
+                # Update label immediately via idle queue (keeps drag smooth)
+                self.root.after_idle(lambda: vv.set(f.format(fv)))
+                # Debounce the actual param write to avoid lock churn
+                c(fv)
+
             sl = tk.Scale(p, from_=from_, to=to, resolution=step,
                           orient=tk.HORIZONTAL, bg=PANEL_BG, fg=TEXT_FG,
                           troughcolor="#21262d", highlightthickness=0,
                           activebackground=ACCENT, showvalue=False,
-                          command=lambda v, vv=vv, f=fmt, c=cmd: (
-                              vv.set(f.format(float(v))), c(float(v))))
+                          command=_on_slider)
             sl.set(init)
             sl.pack(fill="x", padx=12)
             return sl
@@ -395,29 +401,29 @@ class App:
         # ── Setpoints ──────────────────────────────────────────────────────
         section("  Setpoints")
         slider("Speed target [RPM]",   0, MAX_SPEED, INIT_SPEED, 100,
-               lambda v: self._set("speed_target_rpm", v), "{:.0f}")
+               lambda v: self._set_debounced("speed_target_rpm", v), "{:.0f}")
         slider("Speed ramp [RPM/s]",   100, 2000, INIT_RAMP_RPMS, 100,
-               lambda v: self._set("speed_ramp_rpm_s", v), "{:.0f}")
-        slider("Load target [N·m]",    0, MAX_LOAD, INIT_LOAD, 0.05,
-               lambda v: self._set("load_target", v), "{:.2f}")
+               lambda v: self._set_debounced("speed_ramp_rpm_s", v), "{:.0f}")
+        slider("Load target [N·m]",    0, MAX_LOAD, INIT_LOAD, 0.01,
+               lambda v: self._set_debounced("load_target", v), "{:.2f}")
         slider("Load ramp [N·m/s]",    0.1, MAX_LOAD, INIT_LOAD_NMS, 0.01,
-               lambda v: self._set("load_ramp_nm_s", v), "{:.1f}")
+               lambda v: self._set_debounced("load_ramp_nm_s", v), "{:.1f}")
 
         # ── Speed PI ───────────────────────────────────────────────────────
         section("  Speed Controller (PI)")
         slider("Kp speed",   INIT_KP/20.0, INIT_KP*20,   INIT_KP,  INIT_KP/20.0,
-               lambda v: self._set("kp_spd", v), "{:.5f}")
+               lambda v: self._set_debounced("kp_spd", v), "{:.5f}")
         slider("Ki speed",   INIT_KI/20.0,  INIT_KI*20.0, INIT_KI, INIT_KI/20.0,
-               lambda v: self._set("ki_spd", v), "{:.5f}")
+               lambda v: self._set_debounced("ki_spd", v), "{:.5f}")
         slider("Iq max [A]", 0.01,  IQ_MAX,  IQ_MAX, 0.01,
-               lambda v: self._set("iq_max", v), "{:.1f}")
+               lambda v: self._set_debounced("iq_max", v), "{:.1f}")
 
         # ── Current PI ─────────────────────────────────────────────────────
         section("  Current Controllers (PI)")
         slider("Kp current", INIT_KP_DQ/20.0,  INIT_KP_DQ*20.0,  INIT_KP_DQ, INIT_KP_DQ/20.0,
-               lambda v: self._set("kp_cur", v), "{:.1f}")
+               lambda v: self._set_debounced("kp_cur", v), "{:.1f}")
         slider("Ki current", INIT_KP_DQ/20.0,  INIT_KP_DQ*20.0,  INIT_KI_DQ, INIT_KI_DQ/20.0,
-               lambda v: self._set("ki_cur", v), "{:.0f}")
+               lambda v: self._set_debounced("ki_cur", v), "{:.0f}")
 
         # ── Buttons ────────────────────────────────────────────────────────
         tk.Label(p, text="", bg=PANEL_BG).pack()
@@ -486,9 +492,21 @@ class App:
 
         tk.Label(m, text="", bg=MBKG, height=1).pack()
 
+    # ── Debounce: coalesce rapid slider events into one write ──────────────
+    _debounce_jobs: dict = {}
+
     def _set(self, key, value):
+        """Apply param update immediately (called after debounce delay)."""
         with params.lock:
             setattr(params, key, value)
+
+    def _set_debounced(self, key, value, delay_ms=20):
+        """Debounce slider writes: cancel pending job and reschedule."""
+        if key in self._debounce_jobs:
+            self.root.after_cancel(self._debounce_jobs[key])
+        self._debounce_jobs[key] = self.root.after(
+            delay_ms, lambda: self._set(key, value)
+        )
 
     def _on_start(self):
         with params.lock:
@@ -517,7 +535,7 @@ class App:
 
     def _start_animation(self):
         self.ani = FuncAnimation(self.fig, self._update_plot,
-                                 interval=100, blit=True, cache_frame_data=False)
+                                 interval=80, blit=True, cache_frame_data=False)
         self.canvas.draw()
 
     def _update_plot(self, _frame):
