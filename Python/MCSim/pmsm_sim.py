@@ -27,43 +27,67 @@ import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.animation import FuncAnimation
 
+
+#import Drain_Params_W11377410 as motor_params
+import Wash_Params_W20007335 as motor_params
+import Wash_Params_W11652801 as motor_params
+
+# Validação: Garante que ao menos um motor foi descomentado
+try:
+    motor_params
+except NameError as e:
+    raise RuntimeError(
+        "CRITICAL ERROR! "
+        "At least one motor shall be selected."
+    ) from e
+
+# In case of success...
+print(f"Success! Motor Selected: ************** {motor_params.__name__} ************** ")
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  MOTOR CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════
-RS     = 25.4
-LD     = 79.0e-3
-LQ     = 79.0e-3
-LAMBDA = 0.0753
-P      = 3
-J      = 0.0001
-B_FRIC = 0.0002
-VDC    = 310.0
-VMAX   = VDC / 2.0
-IQ_MAX = 0.85
-MAX_SPEED = 3600.0
-MAX_LOAD  = 0.15
+RS     = motor_params.Rs
+LD     = motor_params.Ld
+LQ     = motor_params.Lq
+LAMBDA = motor_params.Psi_PM
+P      = motor_params.p
+J      = motor_params.J
+B_FRIC = motor_params.B
+IQ_MAX = motor_params.IqMax
+MAX_SPEED = motor_params.Max_Speed
+MAX_LOAD  = motor_params.T_L
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  INITIAL PARAMETERS
+# ═══════════════════════════════════════════════════════════════════════════════
+VIN    = 180.0 #AC INPUT LINE VOLTAGE (RMS)
+VDC    = VIN * math.sqrt(2) #IDEAL BUS VOLTAGE CONVERSION (VDC = VIN * sqrt(2))
+VMAX   = VDC / 2.0
+
+INIT_SPEED = MAX_SPEED
+INIT_LOAD  = 0.0
+INIT_RAMP_RPMS = MAX_SPEED / 1.0  #Max. Speed in 1 second
+INIT_LOAD_NMS = 0.1
+
+#SPEED CONTROLLER
+INIT_KP = motor_params.Kp_spd
+INIT_KI = motor_params.Ki_spd
+
+#CURRENT CONTROLLERS (iq & id)
+INIT_KP_DQ = motor_params.Kp
+INIT_KI_DQ = motor_params.Ki
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  SIMULATION PARAMETERS
+# ═══════════════════════════════════════════════════════════════════════════════
 T_CTRL      = 1.0/8000.0
 TS          = T_CTRL/8.0
 BATCH_S     = 0.02
 MAX_PTS     = 60000
 CTRL_EVERY  = int(round(T_CTRL / TS))
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  INITIAL PARAMETERS
-# ═══════════════════════════════════════════════════════════════════════════════
-INIT_SPEED = 3000.0
-INIT_LOAD  = 0.0
-INIT_RAMP_RPMS = 2000.0
-INIT_LOAD_NMS = 0.1
-
-#SPEED CONTROLLER
-INIT_KP = 0.0006
-INIT_KI = 0.002
-
-#CURRENT CONTROLLERS (iq & id)
-INIT_KP_DQ = 180.0 
-INIT_KI_DQ = 10000.0
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  SHARED STATE
@@ -141,6 +165,8 @@ def sim_thread():
 
     def ramp_toward(current, target, rate, dt):
         """Move current toward target at max rate [units/s]."""
+        if rate == 0:
+            rate = 10000.0  # Zero rate will force a step change.
         step = rate * dt
         diff = target - current
         if abs(diff) <= step:
@@ -426,11 +452,11 @@ class App:
         section("  Setpoints")
         spinbox("Speed target [RPM]",  0, MAX_SPEED, INIT_SPEED, 100,
                lambda v: self._set("speed_target_rpm", v), "{:.0f}")
-        spinbox("Speed ramp [RPM/s]",  100, 2000, INIT_RAMP_RPMS, 100,
+        spinbox("Speed ramp [RPM/s]",  100, 4000, INIT_RAMP_RPMS, 100,
                lambda v: self._set("speed_ramp_rpm_s", v), "{:.0f}")
         spinbox("Load target [N·m]",   0, MAX_LOAD, INIT_LOAD, 0.01,
                lambda v: self._set("load_target", v), "{:.2f}")
-        spinbox("Load ramp [N·m/s]",   0.1, MAX_LOAD, INIT_LOAD_NMS, 0.01,
+        spinbox("Load ramp [N·m/s]",   0, MAX_LOAD, INIT_LOAD_NMS, 0.01,
                lambda v: self._set("load_ramp_nm_s", v), "{:.1f}")
 
         # ── Speed PI ───────────────────────────────────────────────────────
