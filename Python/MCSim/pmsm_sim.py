@@ -370,29 +370,53 @@ class App:
                      font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(8,2))
             ttk.Separator(p, orient="horizontal").pack(fill="x", padx=12)
 
-        def slider(label, from_, to, init, step, cmd, fmt="{:.1f}"):
+        def spinbox(label, from_, to, init, step, cmd, fmt="{:.1f}"):
             frm = tk.Frame(p, bg=PANEL_BG)
-            frm.pack(fill="x", padx=12, pady=1)
+            frm.pack(fill="x", padx=12, pady=3)
             tk.Label(frm, text=label, bg=PANEL_BG, fg=TEXT_FG,
                      font=("Segoe UI", 8), width=19, anchor="w").pack(side=tk.LEFT)
-            vv = tk.StringVar(value=fmt.format(init))
-            tk.Label(frm, textvariable=vv, bg=PANEL_BG, fg=ACCENT,
-                     font=("Segoe UI", 8), width=7).pack(side=tk.RIGHT)
-            def _on_slider(v, vv=vv, f=fmt, c=cmd):
-                fv = float(v)
-                # Update label immediately via idle queue (keeps drag smooth)
-                self.root.after_idle(lambda: vv.set(f.format(fv)))
-                # Debounce the actual param write to avoid lock churn
-                c(fv)
 
-            sl = tk.Scale(p, from_=from_, to=to, resolution=step,
-                          orient=tk.HORIZONTAL, bg=PANEL_BG, fg=TEXT_FG,
-                          troughcolor="#21262d", highlightthickness=0,
-                          activebackground=ACCENT, showvalue=False,
-                          command=_on_slider)
-            sl.set(init)
-            sl.pack(fill="x", padx=12)
-            return sl
+            var = tk.StringVar(value=fmt.format(init))
+
+            def _apply(*_):
+                try:
+                    val = float(var.get().strip())
+                    val = max(from_, min(to, val))
+                    var.set(fmt.format(val))
+                    cmd(val)
+                except ValueError:
+                    var.set(fmt.format(init))
+
+            def _step(direction):
+                try:
+                    cur = float(var.get())
+                except ValueError:
+                    cur = init
+                nv = max(from_, min(to, cur + direction * step))
+                var.set(fmt.format(nv))
+                cmd(nv)
+
+            btn_down = tk.Button(frm, text="▼", width=2, relief="flat",
+                                 bg="#21262d", fg=ACCENT,
+                                 font=("Segoe UI", 7), cursor="hand2",
+                                 command=lambda: _step(-1))
+            btn_down.pack(side=tk.RIGHT, padx=(0, 2))
+
+            btn_up = tk.Button(frm, text="▲", width=2, relief="flat",
+                               bg="#21262d", fg=ACCENT,
+                               font=("Segoe UI", 7), cursor="hand2",
+                               command=lambda: _step(+1))
+            btn_up.pack(side=tk.RIGHT, padx=(0, 1))
+
+            sb = ttk.Spinbox(frm, from_=from_, to=to, increment=step,
+                             textvariable=var, width=10,
+                             font=("Courier New", 8))
+            sb.pack(side=tk.RIGHT, padx=(4, 4))
+
+            sb.bind("<Return>",   _apply)
+            sb.bind("<FocusOut>", _apply)
+            sb.bind("<KP_Enter>", _apply)
+            return sb
 
         tk.Label(p, text="PMSM FOC Parameters", bg=PANEL_BG, fg=TEXT_FG,
                  font=("Segoe UI", 10, "bold")).pack(pady=(14,4))
@@ -400,30 +424,30 @@ class App:
 
         # ── Setpoints ──────────────────────────────────────────────────────
         section("  Setpoints")
-        slider("Speed target [RPM]",   0, MAX_SPEED, INIT_SPEED, 100,
-               lambda v: self._set_debounced("speed_target_rpm", v), "{:.0f}")
-        slider("Speed ramp [RPM/s]",   100, 2000, INIT_RAMP_RPMS, 100,
-               lambda v: self._set_debounced("speed_ramp_rpm_s", v), "{:.0f}")
-        slider("Load target [N·m]",    0, MAX_LOAD, INIT_LOAD, 0.01,
-               lambda v: self._set_debounced("load_target", v), "{:.2f}")
-        slider("Load ramp [N·m/s]",    0.1, MAX_LOAD, INIT_LOAD_NMS, 0.01,
-               lambda v: self._set_debounced("load_ramp_nm_s", v), "{:.1f}")
+        spinbox("Speed target [RPM]",  0, MAX_SPEED, INIT_SPEED, 100,
+               lambda v: self._set("speed_target_rpm", v), "{:.0f}")
+        spinbox("Speed ramp [RPM/s]",  100, 2000, INIT_RAMP_RPMS, 100,
+               lambda v: self._set("speed_ramp_rpm_s", v), "{:.0f}")
+        spinbox("Load target [N·m]",   0, MAX_LOAD, INIT_LOAD, 0.01,
+               lambda v: self._set("load_target", v), "{:.2f}")
+        spinbox("Load ramp [N·m/s]",   0.1, MAX_LOAD, INIT_LOAD_NMS, 0.01,
+               lambda v: self._set("load_ramp_nm_s", v), "{:.1f}")
 
         # ── Speed PI ───────────────────────────────────────────────────────
         section("  Speed Controller (PI)")
-        slider("Kp speed",   INIT_KP/20.0, INIT_KP*20,   INIT_KP,  INIT_KP/20.0,
-               lambda v: self._set_debounced("kp_spd", v), "{:.5f}")
-        slider("Ki speed",   INIT_KI/20.0,  INIT_KI*20.0, INIT_KI, INIT_KI/20.0,
-               lambda v: self._set_debounced("ki_spd", v), "{:.5f}")
-        slider("Iq max [A]", 0.01,  IQ_MAX,  IQ_MAX, 0.01,
-               lambda v: self._set_debounced("iq_max", v), "{:.1f}")
+        spinbox("Kp speed",  INIT_KP/20.0, INIT_KP*20,   INIT_KP,  INIT_KP/20.0,
+               lambda v: self._set("kp_spd", v), "{:.5f}")
+        spinbox("Ki speed",  INIT_KI/20.0,  INIT_KI*20.0, INIT_KI, INIT_KI/20.0,
+               lambda v: self._set("ki_spd", v), "{:.5f}")
+        spinbox("Iq max [A]",0.01,  IQ_MAX,  IQ_MAX, 0.01,
+               lambda v: self._set("iq_max", v), "{:.2f}")
 
         # ── Current PI ─────────────────────────────────────────────────────
         section("  Current Controllers (PI)")
-        slider("Kp current", INIT_KP_DQ/20.0,  INIT_KP_DQ*20.0,  INIT_KP_DQ, INIT_KP_DQ/20.0,
-               lambda v: self._set_debounced("kp_cur", v), "{:.1f}")
-        slider("Ki current", INIT_KP_DQ/20.0,  INIT_KP_DQ*20.0,  INIT_KI_DQ, INIT_KI_DQ/20.0,
-               lambda v: self._set_debounced("ki_cur", v), "{:.0f}")
+        spinbox("Kp current",INIT_KP_DQ/20.0,  INIT_KP_DQ*20.0,  INIT_KP_DQ, INIT_KP_DQ/20.0,
+               lambda v: self._set("kp_cur", v), "{:.1f}")
+        spinbox("Ki current",INIT_KP_DQ/20.0,  INIT_KP_DQ*20.0,  INIT_KI_DQ, INIT_KI_DQ/20.0,
+               lambda v: self._set("ki_cur", v), "{:.0f}")
 
         # ── Buttons ────────────────────────────────────────────────────────
         tk.Label(p, text="", bg=PANEL_BG).pack()
@@ -500,7 +524,7 @@ class App:
         with params.lock:
             setattr(params, key, value)
 
-    def _set_debounced(self, key, value, delay_ms=20):
+    def _set_debounced(self, key, value, delay_ms=40):
         """Debounce slider writes: cancel pending job and reschedule."""
         if key in self._debounce_jobs:
             self.root.after_cancel(self._debounce_jobs[key])
