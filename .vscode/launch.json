@@ -1,0 +1,37 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Rodar Python 3.9",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "python": "D:/Tools/WPy64-39100/python-3.9.10.amd64/python.exe",
+            "env": {"PYTHONPATH": "D:/Tools/WPy64-39100/python-3.9.10.amd64/"}
+        },
+        {
+            "name": "Rodar Python 3.6",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "python": "D:/Tools/WinPython-32bit-3.6.3.0Qt5/python-3.6.3/python.exe",
+            "env": {"PYTHONPATH": "D:/Tools/WinPython-32bit-3.6.3.0Qt5/python-3.6.3/"}
+        },
+        {
+            "name": "Compilar e Rodar C",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/MCSim/pmsm_foc.exe",
+            "MIMode": "gdb",
+            "miDebuggerPath": "D:/Tools/MinGW/bin/gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
