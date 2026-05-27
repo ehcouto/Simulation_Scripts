@@ -11,6 +11,10 @@
 #include <stdio.h>
 #include <math.h>
 
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+
 #define MATHCALC__SATURATE_DIRECT(lim_inf, value, lim_sup)                                          \
  (((value) >= (lim_sup)) ? (lim_sup) : ( ((value) <= (lim_inf)) ? (lim_inf) : (value) ))            \
 
