@@ -17,7 +17,7 @@
 */
 #define REQUESTED_TOTAL_MOTOR_SUPPORT           (2u)       /* read only */
 
-#define MOTOR1_FAST_LOOP_FREQUENCY      8000u
+#define MOTOR1_FAST_LOOP_FREQUENCY      7550u
 #define MOTOR1_SLOW_LOOP_FREQUENCY      1000u
 
 #define MOTOR2_FAST_LOOP_FREQUENCY      7550u

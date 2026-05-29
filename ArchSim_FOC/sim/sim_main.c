@@ -26,7 +26,7 @@
 #include "brd.h"
 
 #define MOTOR_SPEED_RPM  2000.0f //rpm
-#define MOTOR_RAMP_RPMS  2000.0f //rpm
+#define MOTOR_RAMP_RPMS  500.0f //rpm
 
 #define SIM_TIME_SEC     10.0f
 #define FOC_FREQ_HZ      (uint32_t)MOTOR1_FAST_LOOP_FREQUENCY
@@ -58,8 +58,16 @@ McSpeedReq_t Speed_Command;
 static void system_init(void);
 static void speed_command(void);
 
+/* --- CSV File Pointer --- */
+FILE *csv;
+
 int main(void)
 {
+    real_t spd_ref, spd_rpm, iu, iv, iw, id, iq, torque;
+
+    csv = fopen("sim_output.csv", "wb");
+    fprintf(csv, "t,iu,iv,iw,SpeedRef,SpeedEst,id,iq,torque\n");
+
     //Variable Initialize
     foc_counter = 0;
     sim_time = 0.0;
@@ -80,8 +88,8 @@ int main(void)
     Motor.Lq = mcp_px[MOTOR]->phys.Lq; // H
     Motor.Phi = mcp_px[MOTOR]->phys.Phi; // Wb   
     Motor.p = mcp_px[MOTOR]->phys.pp; //pole pairs   
-    Motor.J_Inv = 1.0f / 0.0001f;
-    Motor.B = 0.0001f; 
+    Motor.J_Inv = 1.0f / 0.000006f;
+    Motor.B = 0.00009f; 
     pmsm_initialize(Motor);
 
 
@@ -99,16 +107,36 @@ int main(void)
         {
             mcMxHandlerSL(MOTOR);
             speed_command();
+
+            fprintf(csv, "%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+            sim_time,
+            iu,
+            iv,
+            iw,
+            spd_ref,
+            spd_rpm,
+            id,
+            iq,
+            torque);
         }
 
         //Run Inverter Model
         //inverter_step(0.0f, 0.0f, NULL, NULL, NULL);
 
         // Modelo do motor
-        pmsm_step(mpv[MOTOR].v.vdq.d, mpv[MOTOR].v.vdq.q, 0.0f, TS_SIM);
+        pmsm_step(mpv[MOTOR].v.vab.a, mpv[MOTOR].v.vab.b, 0.0f, TS_SIM);
         pmsm_get_outputs(&Motor_Out);
         brdSetData(Motor_Out.Iu, Motor_Out.Iv, Motor_Out.Iw, DCBUS_VOLTAGE, IPM_TEMPERATURE);
         
+        spd_ref = mpv[MOTOR].v.spref;
+        spd_rpm = mpv[MOTOR].v.spest;
+        iu = Motor_Out.Iu;
+        iv = Motor_Out.Iv;
+        iw = Motor_Out.Iw;
+        id = Motor_Out.Sts.id;
+        iq = Motor_Out.Sts.iq;
+        torque = Motor_Out.Te;
+
         //Step up time
         sim_time += TS_SIM;
         foc_counter++;
@@ -121,8 +149,6 @@ int main(void)
 
 
 /* ================= Auxiliary Functions =================== */
-
-
 /* ================ System Init Functions =================== */
 void system_init(void)
 {

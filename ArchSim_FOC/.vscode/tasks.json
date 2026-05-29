@@ -7,7 +7,7 @@
             "command": "powershell.exe",
             "args": [
                 "-Command",
-                "if (Test-Path 'Debug/SimArch_foc.exe') { Remove-Item 'Debug/SimArch_foc.exe' }"
+                "if (Test-Path 'Debug') { Remove-Item 'Debug\\*' -Recurse -Force }"
             ]
         },
         {
@@ -19,21 +19,22 @@
                 "if (!(Test-Path 'Debug')) { New-Item -ItemType Directory -Path 'Debug' }"
             ]
         },
+
         {
             "label": "ArchSim FOC Build Tools",
             "type": "shell",
-
-            /* PLEASE: UPDATE THE PATH WITH THE LOCATION OF THE GCC COMPILER IN YOUR SYSTEM */
             "command": "D:\\Tools\\MinGW64\\bin\\gcc.exe",
             "args": [
                 "-Wall",
                 "-g",
                 "-O0",
                 "-std=c99",
+
                 "sim/sim_main.c",
                 "sim/pmsm_rk4.c",
                 "sim/inverter_model.c",
                 "sim/speed_controller.c",
+
                 "mc/api/mc.c",
                 "mc/features/hard_brake.c",
                 "mc/features/torq_compensation.c",
@@ -49,8 +50,10 @@
                 "mc/uti/controllers.c",
                 "mc/uti/dsp.c",
                 "mc/uti/math_.c",
-                "mc/vp/mcglobals.c",       
-                "brd/brd.c",       
+                "mc/vp/mcglobals.c",
+
+                "brd/brd.c",
+
                 "-I", "sim",
                 "-I", "mc",
                 "-I", "mc/api",
@@ -66,12 +69,49 @@
                 "-I", "mc/uti",
                 "-I", "mc/vp",
                 "-I", "brd",
+
                 "-o", "Debug/SimArch_foc.exe",
                 "-lm"
             ],
             "dependsOn": ["clean-debug", "make-debug-folder"],
             "group": "build",
             "problemMatcher": ["$gcc"]
+        },
+
+        {
+            "label": "Run Simulation",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-Command",
+                "& \"${workspaceFolder}/Debug/SimArch_foc.exe\""
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/Debug"
+            }
+        },
+
+        {
+            "label": "Run Python Plot",
+            "type": "shell",
+            "command": "D:\\Tools\\WinPython-32bit-3.6.3.0Qt5\\python-3.6.3\\python.exe",
+            "args": [
+                "plot_sim.py",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        },
+
+        {
+            "label": "Build + Run + Plot",
+            "group": "build",
+            "dependsOn": [
+                "ArchSim FOC Build Tools",
+                "Run Simulation",
+                "Run Python Plot"
+            ],
+            "dependsOrder": "sequence"
         }
     ]
 }

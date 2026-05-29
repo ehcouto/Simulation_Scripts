@@ -32,6 +32,9 @@ static PMSMState States;
 static PMSMInputs Inputs;
 static PMSMOutputs Outputs;
 
+static real_t sin_theta;
+static real_t cos_theta;
+
 static void CurrentReconstruction(PMSMOutputs *out);
 
 /* ========================= Initializacao do Motor =========================== */
@@ -133,10 +136,13 @@ void pmsm_rk4_step(
     {
     	sk.theta_e -= TWO_PI;
     }
-    if(sk.theta_e < -TWO_PI) //SAH
+    if(sk.theta_e < 0.0f) //SAH
     {
     	sk.theta_e += TWO_PI;
     }
+
+    sin_theta = sinf(sk.theta_e);
+    cos_theta = cosf(sk.theta_e);
 
     // Retorna estado final
     *states = sk;
@@ -167,11 +173,11 @@ int main(void) {
 }*/
 
 /* =================== External Callback ===================== */
-void pmsm_step(float32 vd, float32 vq, float32 tl, float32 ts)
+void pmsm_step(float32 va, float32 vb, float32 tl, float32 ts)
 {
     //Update input variables
-    Inputs.vd = vd;
-    Inputs.vq = vq;
+    Inputs.vd = (va * cos_theta) + (vb * sin_theta); //vd = Park Transform from ab -> dq 
+    Inputs.vq = ((-va) * sin_theta) + (vb * cos_theta); //vq = Park Transform from ab -> dq 
     Inputs.T_L = tl;
 
     //Reload motor model
@@ -193,9 +199,6 @@ void CurrentReconstruction(PMSMOutputs *out)
 {
     real_t i_alpha;
     real_t i_beta;
-
-    real_t sin_theta = sinf(States.theta_e);
-    real_t cos_theta = cosf(States.theta_e);
 
     //Inverse Park Transform
     i_alpha = (out->Sts.id * cos_theta) - (out->Sts.iq * sin_theta);

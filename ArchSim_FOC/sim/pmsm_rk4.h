@@ -80,5 +80,5 @@ void pmsm_rk4_step(
     PMSMOutputs       *outputs,      // [out] sa�das no final do passo (pode ser NULL)
     real_t             Ts            // [in] per�odo de integra��o [s]
 );
-void pmsm_step(float32 vd, float32 vq, float32 tl, float32 ts);
+void pmsm_step(float32 va, float32 vb, float32 tl, float32 ts);
 void pmsm_get_outputs(PMSMOutputs *outputs);
