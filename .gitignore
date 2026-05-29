@@ -2,3 +2,5 @@
 /.project
 /.pydevproject
 /Python/MCSim/__pycache__
+/ArchSim_FOC/Debug/sim_output.csv
+/ArchSim_FOC/Debug/SimArch_foc.exe
