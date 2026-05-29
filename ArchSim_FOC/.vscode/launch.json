@@ -1,0 +1,44 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug ArchSim FOC (ucrt64)",
+            "type": "cppdbg",
+            "request": "launch",
+
+            "program": "${workspaceFolder}/Debug/SimArch_foc.exe",
+            "args": [],
+
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": false,
+
+            "MIMode": "gdb",
+            /* PLEASE: UPDATE THE PATH WITH THE LOCATION OF THE GDB APPLICATION IN YOUR SYSTEM */
+            "miDebuggerPath": "D:\\Tools\\MinGW64\\bin\\gdb.exe",
+
+            "pipeTransport": {
+                "pipeProgram": "powershell.exe",
+                "pipeArgs": ["-Command"],
+                /* PLEASE: UPDATE THE PATH WITH THE LOCATION OF THE GDB APPLICATION IN YOUR SYSTEM */
+                "debuggerPath": "D:\\Tools\\MinGW64\\bin\\gdb.exe",
+            },
+
+            "windows": {
+                "MIMode": "gdb",
+                /* PLEASE: UPDATE THE PATH WITH THE LOCATION OF THE GDB APPLICATION IN YOUR SYSTEM */
+                "miDebuggerPath": "D:\\Tools\\MinGW64\\bin\\gdb.exe",
+            },
+
+            "preLaunchTask": "ArchSim FOC Build Tools",
+
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

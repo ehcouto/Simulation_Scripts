@@ -16,3 +16,6 @@ Created C_Library with C code designed to simulate the FOC control, generate a c
 
 Version: 1.4
 Added Python FOC simulation in real time with parameters change in real time. 
+
+Version 1.5
+Added SimARch Simulation with Beko's FOC

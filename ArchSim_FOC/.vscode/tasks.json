@@ -1,0 +1,77 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "clean-debug",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-Command",
+                "if (Test-Path 'Debug/SimArch_foc.exe') { Remove-Item 'Debug/SimArch_foc.exe' }"
+            ]
+        },
+        {
+            "label": "make-debug-folder",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-Command",
+                "if (!(Test-Path 'Debug')) { New-Item -ItemType Directory -Path 'Debug' }"
+            ]
+        },
+        {
+            "label": "ArchSim FOC Build Tools",
+            "type": "shell",
+
+            /* PLEASE: UPDATE THE PATH WITH THE LOCATION OF THE GCC COMPILER IN YOUR SYSTEM */
+            "command": "D:\\Tools\\MinGW64\\bin\\gcc.exe",
+            "args": [
+                "-Wall",
+                "-g",
+                "-O0",
+                "-std=c99",
+                "sim/sim_main.c",
+                "sim/pmsm_rk4.c",
+                "sim/inverter_model.c",
+                "sim/speed_controller.c",
+                "mc/api/mc.c",
+                "mc/features/hard_brake.c",
+                "mc/features/torq_compensation.c",
+                "mc/foc/foc.c",
+                "mc/fs/fs.c",
+                "mc/fs/fsglobals.c",
+                "mc/init/mcinit.c",
+                "mc/loops/mcloop.c",
+                "mc/observers/mcobservers.c",
+                "mc/sampling/mcsampling.c",
+                "mc/states/mcstate.c",
+                "mc/test/mctest.c",
+                "mc/uti/controllers.c",
+                "mc/uti/dsp.c",
+                "mc/uti/math_.c",
+                "mc/vp/mcglobals.c",       
+                "brd/brd.c",       
+                "-I", "sim",
+                "-I", "mc",
+                "-I", "mc/api",
+                "-I", "mc/features",
+                "-I", "mc/foc",
+                "-I", "mc/fs",
+                "-I", "mc/init",
+                "-I", "mc/loops",
+                "-I", "mc/observers",
+                "-I", "mc/sampling",
+                "-I", "mc/states",
+                "-I", "mc/test",
+                "-I", "mc/uti",
+                "-I", "mc/vp",
+                "-I", "brd",
+                "-o", "Debug/SimArch_foc.exe",
+                "-lm"
+            ],
+            "dependsOn": ["clean-debug", "make-debug-folder"],
+            "group": "build",
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
