@@ -36,6 +36,7 @@ bool brdGetDCBusOpenStatus(void);
 bool brdGetEncoderData(float *_pos, float *_sp);
 void brdShortCircuitBottomTransistors(void);
 
-void brdSetData(float current_u, float current_v, float current_w, float dc_bus_voltage, float ipm_temperature);
+void brdGetData(float *current_u, float *current_v, float *current_w, float *dc_bus_voltage, float *ipm_temperature);
+void ADC_Reading(void);
 
 #endif

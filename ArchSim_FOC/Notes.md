@@ -1,22 +1,33 @@
-# Version
+# FOC Beko SIL Architecture Simulation
 
-- v1.0 - Initial Release
+## Author
+- Eduardo H Couto (eduardo.h.couto@beko.com)
 
-# Main Features
+## Version
+
+- **v1.1:** Added different motor features and ADC sensor simulation (06/2026)
+- **v1.0:** Initial Release (05/2026)
+
+## Main Features
 
 - PMSM Motor implemented in dq integrated with Runge Kutta 4a Order.
+- Beko FOC Code Integrated.
+- Basic Board Features Implemented.
 
-# Installation Details:
+## Installation Details:
 - Algorithm is configured to be executed in VS Code editor (Windows): tasks.json & launch.json were configured to properly compile the code. 
 - GCC compiler shall be installed in the computer, and path might be updated in tasks.json & launch.json files.
 - GCC compiler used can be downloaded on [winlibs.com](https://winlibs.com/). Use GCC compiler version 16.1.0 or higher.
 - Once GCC compiler is installed and paths updated, execute the task by pressing ctrl + shift + B.
 - There are 2 different tasks:
--- ArchSim_FOC build tools: Used to compiled the code. 
--- Build + Run + Plot: Will build, run and plot the data using the python script. Python used is version 3.6
 
+    1- **ArchSim_FOC build tools**: *Used to simply compile the code*. 
 
-# Possible Updates
+    2- **Build + Run + Plot**: *Will build, run and plot the data using the python script. Python used is version 3.6 + pandas library.*
+- By pressing F5, you can start the debugger window.
+
+## Next Steps to Implement:
 
 - Ideal / Real Inverter Model to allow the duty cycles to be the input to the PMSM model.
-- ADC Sensor Simulations
+- Inverter Non-Linearities Simulation.
+- VBus Voltage model to include voltage ripple in the simulation. 

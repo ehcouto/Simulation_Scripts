@@ -10,7 +10,7 @@
 #define INERTIA_J  8.7E-6f
 #define VISC_B     4.6E-5f
 #define POLE_PAIRS 3U
-#define TL_MAX     0.14f
+#define TL_MAX     0.216f
 #define MAX_SPEED  3500.0f
 
 #define MOTOR_RAMP_RPMS  750.0f //rpm

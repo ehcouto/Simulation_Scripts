@@ -1,5 +1,5 @@
 /*
- * Simulation Architecture - Beko FOC Simulation
+ * Simulation Architecture (Software-in-the-Loop) - Beko FOC Simulation
  * Author: EDUARDO HENRIQUE COUTO
  * Requisit: C99, <math.h>
  * Date: May/2026
@@ -25,6 +25,11 @@
 #include "mc.h"
 #include "brd.h"
 
+//Plot @ 1Khz       ---> 0
+//Plot @ FOC Freq   ---> 1
+//Plot @ Motor Freq ---> 2
+#define PLOT_TYPE     1
+
 
 //Select Motor
 //#include "DW_WP_W20007335.h"
@@ -32,13 +37,15 @@
 //#include "DW_DR_W11402566.h"
 //#include "DW_DR_W11377410.h"
 
+
 //Select Board
 #include "DW_DEA801.h"
 
-float t_array[]    = {0.1f, 6.0f};
-float spd_array[]  = {3000.0f, 2600.0f};
 
-#define SIM_TIME_SEC     10.0f
+float t_array[]    = {0.1f, 6.0f};  //Time in Seconds
+float spd_array[]  = {3000.0f, 2600.0f}; //Motor Speed in RPM
+
+#define SIM_TIME_SEC     10.0f //Simulation Time in Seconds
 
 #define FOC_FREQ_HZ      (uint32_t)MOTOR1_FAST_LOOP_FREQUENCY
 #define SPEED_FREQ_HZ    (uint32_t)MOTOR1_SLOW_LOOP_FREQUENCY
@@ -47,10 +54,6 @@ float spd_array[]  = {3000.0f, 2600.0f};
 #define TS_SIM           (1.0f / MOTOR_FREQ_HZ)
 #define TS_FOC           (1.0f / FOC_FREQ_HZ)
 #define TS_SPEED         (1.0f / SPEED_FREQ_HZ)
-
-#define VMAINS           230.0f
-#define DCBUS_VOLTAGE    (VMAINS * sqrtf(2.0f) - 5.0f)
-#define IPM_TEMPERATURE  25.0f
 
 // --- Global Variables --- 
 static uint32 foc_counter;
@@ -62,7 +65,7 @@ static PMSMOutputs Motor_Out;
 static uint32_t MOTOR = MOTOR0;
  
 static mcInit_t mcInit;
-static mcMpvInit_t mcMpvInit1;
+static mcMpvInit_t mcMpvInit;
 
 static McSpeedReq_t Speed_Ref;
 static float32 t_l;
@@ -105,23 +108,37 @@ int main(void)
     Motor.B = VISC_B; 
     pmsm_initialize(Motor);
 
-
     /* --- loop Begin --- */
     while (sim_time < SIM_TIME_SEC)
     {
         // Loop de velocidade (FOC Hanlder)
         if((foc_counter % (uint32)(MOTOR_FREQ_HZ / FOC_FREQ_HZ)) == 0)
         {
+            //ADC Interruption Simulation
+            ADC_Reading();
+
+            //Run FOC Handler
             mcMxHandlerFL(MOTOR);
-            Packing_Data_Csv();
+
+            //Plot Data at FOC Frequency
+            #if PLOT_TYPE == 1
+                Packing_Data_Csv();
+            #endif 
         }
 
         // Loop de velocidade (1 kHz)
         if((foc_counter % (uint32)(MOTOR_FREQ_HZ / SPEED_FREQ_HZ)) == 0)
         {
+            //Generate Speed Commands
             speed_command(t_array, spd_array, sizeof(t_array) / sizeof(float), sim_time);
+
+            //Run Low Frequency Handler (Speed Loop)
             mcMxHandlerSL(MOTOR);
-            //Packing_Data_Csv();
+
+            //Plot Data at FOC Frequency
+            #if PLOT_TYPE == 0
+                Packing_Data_Csv();
+            #endif
         }
 
         //Run Inverter Model
@@ -130,10 +147,10 @@ int main(void)
         // Modelo do motor
         load_torque();
         pmsm_step(mpv[MOTOR].v.vab.a, mpv[MOTOR].v.vab.b, t_l, TS_SIM);
-        pmsm_get_outputs(&Motor_Out);
-        brdSetData(Motor_Out.Iu, Motor_Out.Iv, Motor_Out.Iw, DCBUS_VOLTAGE, IPM_TEMPERATURE);
         
-        //Packing_Data_Csv();
+        #if PLOT_TYPE == 2
+            Packing_Data_Csv();
+        #endif
 
         //Step up time
         sim_time += TS_SIM;
@@ -152,37 +169,36 @@ int main(void)
 void system_init(void)
 {
     brd_init();
-    brdSetData(0.0f, 0.0f, 0.0f, DCBUS_VOLTAGE, IPM_TEMPERATURE);
     
     mcInit.mcDrvTurnOnInrushRelay = brdTurnOnInrushRelay;
     mcInitMotorControl(&mcInit);
 
-    mcMpvInit1.freqFL = MOTOR1_FAST_LOOP_FREQUENCY;
-    mcMpvInit1.freqSL = MOTOR1_SLOW_LOOP_FREQUENCY;
-    mcMpvInit1.mcBrdPwmEnable = brdPwmEnable;
-    mcMpvInit1.mcBrdPwmDisable = brdPwmDisable;
-    mcMpvInit1.mcBrdPwmEnablePhaseU = brdPwmEnablePhaseU;
-    mcMpvInit1.mcBrdPwmEnablePhaseV = brdPwmEnablePhaseV;
-    mcMpvInit1.mcBrdPwmEnablePhaseW = brdPwmEnablePhaseW;
-    mcMpvInit1.mcBrdPwmEnablePhaseUVW = brdPwmEnablePhaseUVW;
-    mcMpvInit1.mcBrdMapAdcChannels = brdMapAdcChannels;
-    mcMpvInit1.mcBrdSampleCurrentsUVW = brdSampleCurrentsUVW;
-    mcMpvInit1.mcBrdGetPhaseCurrentU = brdGetPhaseCurrentU;
-    mcMpvInit1.mcBrdGetPhaseCurrentV = brdGetPhaseCurrentV;
-    mcMpvInit1.mcBrdGetPhaseCurrentW = brdGetPhaseCurrentW;
-    mcMpvInit1.mcBrdCurrentCalibrationInit = brdCurrentCalibrationInit;
-    mcMpvInit1.mcBrdCurrentCalibrationHandler = brdCurrentCalibrationHandler;
-    mcMpvInit1.mcBrdGetDcBusVoltage = brdGetDcBusVoltage;
-    mcMpvInit1.mcBrdGetIpmTemperature = brdGetIpmTemperature;
-    mcMpvInit1.mcBrdGetIpmFaultOutState = brdGetIpmFaultOutState;
-    mcMpvInit1.mcBrdResetIpmFaultOutState = brdResetIpmFaultOutState;
-    mcMpvInit1.mcBrdSetPwmDuties = brdSetPwmDuties;
-    mcMpvInit1.mcBrdGetEncoderData = brdGetEncoderData;
-    mcMpvInit1.mcBrdGetDCBusOpenStatus = brdGetDCBusOpenStatus;
-    mcMpvInit1.mcBrdShortCircBotTransistors = brdShortCircuitBottomTransistors;
+    mcMpvInit.freqFL = MOTOR1_FAST_LOOP_FREQUENCY;
+    mcMpvInit.freqSL = MOTOR1_SLOW_LOOP_FREQUENCY;
+    mcMpvInit.mcBrdPwmEnable = brdPwmEnable;
+    mcMpvInit.mcBrdPwmDisable = brdPwmDisable;
+    mcMpvInit.mcBrdPwmEnablePhaseU = brdPwmEnablePhaseU;
+    mcMpvInit.mcBrdPwmEnablePhaseV = brdPwmEnablePhaseV;
+    mcMpvInit.mcBrdPwmEnablePhaseW = brdPwmEnablePhaseW;
+    mcMpvInit.mcBrdPwmEnablePhaseUVW = brdPwmEnablePhaseUVW;
+    mcMpvInit.mcBrdMapAdcChannels = brdMapAdcChannels;
+    mcMpvInit.mcBrdSampleCurrentsUVW = brdSampleCurrentsUVW;
+    mcMpvInit.mcBrdGetPhaseCurrentU = brdGetPhaseCurrentU;
+    mcMpvInit.mcBrdGetPhaseCurrentV = brdGetPhaseCurrentV;
+    mcMpvInit.mcBrdGetPhaseCurrentW = brdGetPhaseCurrentW;
+    mcMpvInit.mcBrdCurrentCalibrationInit = brdCurrentCalibrationInit;
+    mcMpvInit.mcBrdCurrentCalibrationHandler = brdCurrentCalibrationHandler;
+    mcMpvInit.mcBrdGetDcBusVoltage = brdGetDcBusVoltage;
+    mcMpvInit.mcBrdGetIpmTemperature = brdGetIpmTemperature;
+    mcMpvInit.mcBrdGetIpmFaultOutState = brdGetIpmFaultOutState;
+    mcMpvInit.mcBrdResetIpmFaultOutState = brdResetIpmFaultOutState;
+    mcMpvInit.mcBrdSetPwmDuties = brdSetPwmDuties;
+    mcMpvInit.mcBrdGetEncoderData = brdGetEncoderData;
+    mcMpvInit.mcBrdGetDCBusOpenStatus = brdGetDCBusOpenStatus;
+    mcMpvInit.mcBrdShortCircBotTransistors = brdShortCircuitBottomTransistors;
     
     set_motor(MOTOR);
-    mcAddMotor(&mcMpvInit1);
+    mcAddMotor(&mcMpvInit);
     
     mpv[MOTOR].control_state = INIT;
 	mcEnableMotorControl(MOTOR);
@@ -231,6 +247,8 @@ void load_torque(void)
 void Packing_Data_Csv(void)
 {
     real_t spd_ref, spd_rpm, iu, iv, iw, id, iq, torque;
+
+    pmsm_get_outputs(&Motor_Out);
     
     spd_ref = mpv[MOTOR].v.spref;
     spd_rpm = mpv[MOTOR].v.spest;
