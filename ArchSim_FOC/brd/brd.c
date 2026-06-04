@@ -1,3 +1,11 @@
+/*
+ * Simulation Architecture - Beko FOC Simulation
+ * Author: EDUARDO HENRIQUE COUTO
+ * Requisit: C99, <math.h>
+ * Date: May/2026
+ *
+ * Intended to simulate driver & abstraction layers.           
+ */
 
 #include "brd.h"
 

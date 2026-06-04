@@ -25,10 +25,21 @@
 #include "mc.h"
 #include "brd.h"
 
-#define MOTOR_SPEED_RPM  2000.0f //rpm
-#define MOTOR_RAMP_RPMS  500.0f //rpm
+
+//Select Motor
+//#include "DW_WP_W20007335.h"
+#include "DW_WP_W11652801.h"
+//#include "DW_DR_W11402566.h"
+//#include "DW_DR_W11377410.h"
+
+//Select Board
+#include "DW_DEA801.h"
+
+float t_array[]    = {0.1f, 6.0f};
+float spd_array[]  = {3000.0f, 2600.0f};
 
 #define SIM_TIME_SEC     10.0f
+
 #define FOC_FREQ_HZ      (uint32_t)MOTOR1_FAST_LOOP_FREQUENCY
 #define SPEED_FREQ_HZ    (uint32_t)MOTOR1_SLOW_LOOP_FREQUENCY
 #define MOTOR_FREQ_HZ    (uint32_t)(FOC_FREQ_HZ * 10U)
@@ -43,99 +54,86 @@
 
 // --- Global Variables --- 
 static uint32 foc_counter;
-float32 sim_time;
+static float32 sim_time;
 
-PMSMParams Motor;
-PMSMOutputs Motor_Out;
+static PMSMParams Motor;
+static PMSMOutputs Motor_Out;
+ 
+static uint32_t MOTOR = MOTOR0;
+ 
+static mcInit_t mcInit;
+static mcMpvInit_t mcMpvInit1;
 
-uint32_t MOTOR = MOTOR0;
-
-mcInit_t mcInit;
-mcMpvInit_t mcMpvInit1;
-
-McSpeedReq_t Speed_Command;
+static McSpeedReq_t Speed_Ref;
+static float32 t_l;
 
 static void system_init(void);
-static void speed_command(void);
+static void speed_command(const float *t_array, const float *spd_array, uint32_t n_points, float t_now);
+static void Packing_Data_Csv(void);
+static void load_torque(void);
 
 /* --- CSV File Pointer --- */
 FILE *csv;
 
 int main(void)
 {
-    real_t spd_ref, spd_rpm, iu, iv, iw, id, iq, torque;
-
+    /* --- Initialize CSV File Pointer --- */
     csv = fopen("sim_output.csv", "wb");
     fprintf(csv, "t,iu,iv,iw,SpeedRef,SpeedEst,id,iq,torque\n");
 
-    //Variable Initialize
+    /* --- Initialize Variables --- */
     foc_counter = 0;
-    sim_time = 0.0;
+    sim_time = 0.0f;
+    t_l      = 0.0f;
 
-    Speed_Command.mc_motorIndex = MOTOR;
-    Speed_Command.mc_sprefmec = MOTOR_SPEED_RPM;
-    Speed_Command.mc_ramp_duration = 0.01f; 
-    Speed_Command.mc_rampin = MOTOR_RAMP_RPMS; //rpm/s       
+    Speed_Ref.mc_motorIndex = MOTOR;
+    Speed_Ref.mc_sprefmec = 0.0f; //rpm
+    Speed_Ref.mc_ramp_duration = 0.01f; 
+    Speed_Ref.mc_rampin = MOTOR_RAMP_RPMS; //rpm/s       
 
-    // Function Initialize
+    /* --- Initialize Functions --- */
     //inverter_init(DCBUS_VOLTAGE);
-
     system_init();
 
-    //Create the Motor 
-    Motor.Rs = mcp_px[MOTOR]->phys.r; //25.4f; //ohm phase
-    Motor.Ld = mcp_px[MOTOR]->phys.Ld; // H
-    Motor.Lq = mcp_px[MOTOR]->phys.Lq; // H
-    Motor.Phi = mcp_px[MOTOR]->phys.Phi; // Wb   
-    Motor.p = mcp_px[MOTOR]->phys.pp; //pole pairs   
-    Motor.J_Inv = 1.0f / 0.000006f;
-    Motor.B = 0.00009f; 
+    /* --- Initialize the Motor --- */
+    Motor.Rs = RS; //ohm phase
+    Motor.Ld = LD; // H
+    Motor.Lq = LQ; // H
+    Motor.Phi = LAMBDA_M; // Wb   
+    Motor.p = POLE_PAIRS; //pole pairs   
+    Motor.J_Inv = 1.0f / INERTIA_J;
+    Motor.B = VISC_B; 
     pmsm_initialize(Motor);
 
 
-    //Run Loop
+    /* --- loop Begin --- */
     while (sim_time < SIM_TIME_SEC)
     {
         // Loop de velocidade (FOC Hanlder)
         if((foc_counter % (uint32)(MOTOR_FREQ_HZ / FOC_FREQ_HZ)) == 0)
         {
             mcMxHandlerFL(MOTOR);
+            Packing_Data_Csv();
         }
 
         // Loop de velocidade (1 kHz)
         if((foc_counter % (uint32)(MOTOR_FREQ_HZ / SPEED_FREQ_HZ)) == 0)
         {
+            speed_command(t_array, spd_array, sizeof(t_array) / sizeof(float), sim_time);
             mcMxHandlerSL(MOTOR);
-            speed_command();
-
-            fprintf(csv, "%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
-            sim_time,
-            iu,
-            iv,
-            iw,
-            spd_ref,
-            spd_rpm,
-            id,
-            iq,
-            torque);
+            //Packing_Data_Csv();
         }
 
         //Run Inverter Model
         //inverter_step(0.0f, 0.0f, NULL, NULL, NULL);
 
         // Modelo do motor
-        pmsm_step(mpv[MOTOR].v.vab.a, mpv[MOTOR].v.vab.b, 0.0f, TS_SIM);
+        load_torque();
+        pmsm_step(mpv[MOTOR].v.vab.a, mpv[MOTOR].v.vab.b, t_l, TS_SIM);
         pmsm_get_outputs(&Motor_Out);
         brdSetData(Motor_Out.Iu, Motor_Out.Iv, Motor_Out.Iw, DCBUS_VOLTAGE, IPM_TEMPERATURE);
         
-        spd_ref = mpv[MOTOR].v.spref;
-        spd_rpm = mpv[MOTOR].v.spest;
-        iu = Motor_Out.Iu;
-        iv = Motor_Out.Iv;
-        iw = Motor_Out.Iw;
-        id = Motor_Out.Sts.id;
-        iq = Motor_Out.Sts.iq;
-        torque = Motor_Out.Te;
+        //Packing_Data_Csv();
 
         //Step up time
         sim_time += TS_SIM;
@@ -149,6 +147,7 @@ int main(void)
 
 
 /* ================= Auxiliary Functions =================== */
+
 /* ================ System Init Functions =================== */
 void system_init(void)
 {
@@ -181,18 +180,75 @@ void system_init(void)
     mcMpvInit1.mcBrdGetEncoderData = brdGetEncoderData;
     mcMpvInit1.mcBrdGetDCBusOpenStatus = brdGetDCBusOpenStatus;
     mcMpvInit1.mcBrdShortCircBotTransistors = brdShortCircuitBottomTransistors;
+    
+    set_motor(MOTOR);
     mcAddMotor(&mcMpvInit1);
-
+    
     mpv[MOTOR].control_state = INIT;
 	mcEnableMotorControl(MOTOR);
-
-    mcp_px[MOTOR] = &mcp_dw_circ_W20007335;
-    fsp_px[MOTOR] = &fsp_dw_circ_W20007335;
 }
 
 
 /* ================= Speed Command Function =================== */
-void speed_command(void)
+void speed_command(const float *t_array, const float *spd_array, uint32_t n_points, float t_now)
 {
-    mcRequestSpeed(&Speed_Command);
+    float spd_ref = 0.0f;
+
+    // Initialize at zero...
+    if (t_now <= t_array[0])
+        spd_ref = 0.0f;
+
+    // saturate the speed at the last command...
+    if (t_now >= t_array[n_points - 1])
+        spd_ref = spd_array[n_points - 1];
+
+    // seek correct interval...
+    for (size_t i = 0; i < n_points - 1; i++)
+    {
+        if (t_now >= t_array[i] && t_now < t_array[i + 1])
+        {
+            spd_ref = spd_array[i];
+        }
+    }
+   
+    //Ref. Speed Udpate
+    Speed_Ref.mc_sprefmec = spd_ref;
+
+    //Report to MC
+    mcRequestSpeed(&Speed_Ref);
+}
+
+
+
+/* ================= Load Torque Generatuion =================== */
+void load_torque(void)
+{
+    t_l = TL_MAX * (mpv[MOTOR].v.spref / MAX_SPEED);
+}
+
+
+/* ================= CSV Packing Function =================== */
+void Packing_Data_Csv(void)
+{
+    real_t spd_ref, spd_rpm, iu, iv, iw, id, iq, torque;
+    
+    spd_ref = mpv[MOTOR].v.spref;
+    spd_rpm = mpv[MOTOR].v.spest;
+    iu = Motor_Out.Iu;
+    iv = Motor_Out.Iv;
+    iw = Motor_Out.Iw;
+    id = Motor_Out.Sts.id;
+    iq = Motor_Out.Sts.iq;
+    torque = t_l; //Motor_Out.Te;
+
+    fprintf(csv, "%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+            sim_time,
+            iu,
+            iv,
+            iw,
+            spd_ref,
+            spd_rpm,
+            id,
+            iq,
+            torque);
 }
