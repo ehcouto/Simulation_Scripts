@@ -30,20 +30,19 @@
 //Plot @ Motor Freq ---> 2
 #define PLOT_TYPE     1
 
-
-//Select Motor
-//#include "DW_WP_W20007335.h"
-#include "DW_WP_W11652801.h"
-//#include "DW_DR_W11402566.h"
-//#include "DW_DR_W11377410.h"
+//Ideal               ---> 0
+//Deadtime + losses   ---> 1
+//dT + losses + delay ---> 2
+#define INVERTER_TYPE  2
 
 
-//Select Board
-#include "DW_DEA801.h"
+//Motor & Board Selection
+#include "Motor_Sel.h"
+#include "Board_Sel.h"
 
 
 float t_array[]    = {0.1f, 6.0f};  //Time in Seconds
-float spd_array[]  = {3000.0f, 2600.0f}; //Motor Speed in RPM
+float spd_array[]  = {3000.0f, 2500.0f}; //Motor Speed in RPM
 
 #define SIM_TIME_SEC     10.0f //Simulation Time in Seconds
 
@@ -70,52 +69,40 @@ static mcMpvInit_t mcMpvInit;
 static McSpeedReq_t Speed_Ref;
 static float32 t_l;
 
+//Inverter Variables
+PhaseVoltages inverter_output;
+InverterInput inverter_input;
+
 static void system_init(void);
 static void speed_command(const float *t_array, const float *spd_array, uint32_t n_points, float t_now);
 static void Packing_Data_Csv(void);
 static void load_torque(void);
+static void run_inverter_model(void);
 
 /* --- CSV File Pointer --- */
 FILE *csv;
 
 int main(void)
 {
-    /* --- Initialize CSV File Pointer --- */
-    csv = fopen("sim_output.csv", "wb");
-    fprintf(csv, "t,iu,iv,iw,SpeedRef,SpeedEst,id,iq,torque\n");
-
-    /* --- Initialize Variables --- */
-    foc_counter = 0;
-    sim_time = 0.0f;
-    t_l      = 0.0f;
-
-    Speed_Ref.mc_motorIndex = MOTOR;
-    Speed_Ref.mc_sprefmec = 0.0f; //rpm
-    Speed_Ref.mc_ramp_duration = 0.01f; 
-    Speed_Ref.mc_rampin = MOTOR_RAMP_RPMS; //rpm/s       
-
     /* --- Initialize Functions --- */
-    //inverter_init(DCBUS_VOLTAGE);
     system_init();
 
-    /* --- Initialize the Motor --- */
-    Motor.Rs = RS; //ohm phase
-    Motor.Ld = LD; // H
-    Motor.Lq = LQ; // H
-    Motor.Phi = LAMBDA_M; // Wb   
-    Motor.p = POLE_PAIRS; //pole pairs   
-    Motor.J_Inv = 1.0f / INERTIA_J;
-    Motor.B = VISC_B; 
-    pmsm_initialize(Motor);
+    /* --- Initialize PMSM Model Module --- */
+    pmsm_initialize(Motor, TS_SIM);
 
     /* --- loop Begin --- */
     while (sim_time < SIM_TIME_SEC)
     {
+        /* ********************************************* */
+        /* ********** Load System Data ***************** */ 
+        /* ********************************************* */
+        pmsm_get_outputs(&Motor_Out);
+
         // Loop de velocidade (FOC Hanlder)
         if((foc_counter % (uint32)(MOTOR_FREQ_HZ / FOC_FREQ_HZ)) == 0)
         {
             //ADC Interruption Simulation
-            ADC_Reading();
+            ADC_Reading(mpv[MOTOR].v.sector);
 
             //Run FOC Handler
             mcMxHandlerFL(MOTOR);
@@ -141,18 +128,20 @@ int main(void)
             #endif
         }
 
-        //Run Inverter Model
-        //inverter_step(0.0f, 0.0f, NULL, NULL, NULL);
+        // execute the inverter model
+        run_inverter_model();
 
-        // Modelo do motor
+        // run load profile - generate t_l
         load_torque();
-        pmsm_step(mpv[MOTOR].v.vab.a, mpv[MOTOR].v.vab.b, t_l, TS_SIM);
+
+        // motor model
+        pmsm_step(inverter_output.Va, inverter_output.Vb, inverter_output.Vc, t_l);
         
         #if PLOT_TYPE == 2
             Packing_Data_Csv();
         #endif
 
-        //Step up time
+        //Step up time & counters
         sim_time += TS_SIM;
         foc_counter++;
     }
@@ -168,6 +157,31 @@ int main(void)
 /* ================ System Init Functions =================== */
 void system_init(void)
 {
+    /* --- Initialize CSV File Pointer --- */
+    csv = fopen("sim_output.csv", "wb");
+    fprintf(csv, "t,iu,iv,iw,SpeedRef,SpeedEst,SpeedReal,id,id_m,iq,iq_m,vd,vq,torque,tq_m,tq_load,theta,th_m\n");
+
+    /* --- Initialize the Motor --- */
+    Motor.Rs = RS; //ohm phase
+    Motor.Ld = LD; // H
+    Motor.Lq = LQ; // H
+    Motor.Phi = LAMBDA_M; // Wb   
+    Motor.p = POLE_PAIRS; //pole pairs   
+    Motor.J_Inv = 1.0f / INERTIA_J;
+    Motor.B = VISC_B; 
+
+    /* --- Initialize Variables --- */
+    foc_counter = 0;
+    sim_time = 0.0f;
+    t_l      = 0.0f;
+
+     /* --- Initialize Speed Command Parameters --- */
+    Speed_Ref.mc_motorIndex = MOTOR;
+    Speed_Ref.mc_sprefmec = 0.0f; //rpm
+    Speed_Ref.mc_ramp_duration = 0.01f; 
+    Speed_Ref.mc_rampin = MOTOR_RAMP_RPMS; //rpm/s 
+
+    inverter_model_init(TS_FOC);
     brd_init();
     
     mcInit.mcDrvTurnOnInrushRelay = brdTurnOnInrushRelay;
@@ -243,30 +257,77 @@ void load_torque(void)
 }
 
 
+
+
+void run_inverter_model(void)
+{
+    //Load Duties
+    inverter_input.duty_u = mpv[MOTOR].v.duvw_comp.u;
+    inverter_input.duty_v = mpv[MOTOR].v.duvw_comp.v;
+    inverter_input.duty_w = mpv[MOTOR].v.duvw_comp.w;
+
+    //Load Currents from motor model
+    inverter_input.i_u = Motor_Out.Iu;
+    inverter_input.i_v = Motor_Out.Iv;
+    inverter_input.i_w = Motor_Out.Iw;
+
+    //Load DC Bus Voltage
+    inverter_input.vdc = brdGetDcBusVoltage();
+
+    //Run the selected inverter model
+    #if(INVERTER_TYPE == 0)
+        inverter_output = inverter_model_ideal(inverter_input);
+    #elif(INVERTER_TYPE == 1)
+        inverter_output = inverter_model_dt_losses(inverter_input);  
+    #elif(INVERTER_TYPE == 2)
+        inverter_output = inverter_model_delay(inverter_input);   
+    #endif
+}
+
+
+
+
 /* ================= CSV Packing Function =================== */
 void Packing_Data_Csv(void)
 {
-    real_t spd_ref, spd_rpm, iu, iv, iw, id, iq, torque;
+    real_t spd_ref, spd_rpm, spd_real, iu, iv, iw, id, id_m, iq, iq_m, torque, tq_load, tq_m, th_m, theta, vd, vq;
 
-    pmsm_get_outputs(&Motor_Out);
-    
     spd_ref = mpv[MOTOR].v.spref;
     spd_rpm = mpv[MOTOR].v.spest;
+    spd_real = Motor_Out.Sts.omega_m * (30.0 / MC_PI);
     iu = Motor_Out.Iu;
     iv = Motor_Out.Iv;
     iw = Motor_Out.Iw;
-    id = Motor_Out.Sts.id;
-    iq = Motor_Out.Sts.iq;
-    torque = t_l; //Motor_Out.Te;
+    id_m = Motor_Out.Sts.id;
+    iq_m = Motor_Out.Sts.iq;
+    id = mpv[MOTOR].v.idq.d;
+    iq = mpv[MOTOR].v.idq.q;
+    tq_m = Motor_Out.Te;
+    torque = iq * mpv[MOTOR].p.phys.Kt * 0.70710678118654752440f;
+    tq_load = t_l;
+    th_m = Motor_Out.Sts.theta_e * 180.0 / MC_PI;
+    theta = mpv[MOTOR].v.thest.th;
+    vd = mpv[MOTOR].v.vdq.d;
+    vq = mpv[MOTOR].v.vdq.q;
 
-    fprintf(csv, "%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+    fprintf(csv, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
             sim_time,
             iu,
             iv,
             iw,
             spd_ref,
             spd_rpm,
+            spd_real,
             id,
+            id_m,
             iq,
-            torque);
+            iq_m,
+            vd,
+            vq,
+            torque,
+            tq_m,
+            tq_load,
+            theta,
+            th_m);
 }
+

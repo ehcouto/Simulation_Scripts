@@ -23,11 +23,12 @@
 
     1- **ArchSim_FOC build tools**: *Used to simply compile the code*. 
 
-    2- **Build + Run + Plot**: *Will build, run and plot the data using the python script. Python used is version 3.6 + pandas library.*
+    2- **Build + Run + Plot**: *Will build, run and plot the data using the python script. Recommended WinPython version 3.14 or higher + pandas + matplotlib libraries.*
+- To install WinPython, use the following link "https://winpython.github.io/" - For this simulation version used (WinPython64-3.14.5.0).
 - By pressing F5, you can start the debugger window.
 
 ## Next Steps to Implement:
 
-- Ideal / Real Inverter Model to allow the duty cycles to be the input to the PMSM model.
+- More Realistic Inverter Model to simulate the PWM effects in the motor control.
 - Inverter Non-Linearities Simulation.
 - VBus Voltage model to include voltage ripple in the simulation. 

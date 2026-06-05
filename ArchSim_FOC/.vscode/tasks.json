@@ -96,8 +96,9 @@
         {
             "label": "Run Python Plot",
             "type": "shell",
-            "command": "D:\\Tools\\WinPython-32bit-3.6.3.0Qt5\\python-3.6.3\\python.exe",
+            "command": "D:\\Tools\\WPy64\\python\\python.exe",
             "args": [
+                "-u",
                 "plot_sim.py",
             ],
             "options": {
@@ -111,6 +112,15 @@
             "dependsOn": [
                 "ArchSim FOC Build Tools",
                 "Run Simulation",
+                "Run Python Plot"
+            ],
+            "dependsOrder": "sequence"
+        },
+
+        {
+            "label": "Only Plot",
+            "group": "build",
+            "dependsOn": [
                 "Run Python Plot"
             ],
             "dependsOrder": "sequence"

@@ -11,10 +11,11 @@
 
 #include "brd.h"
 #include "pmsm_rk4.h"
-#include "DW_DEA801.h"
+#include "Board_Sel.h"
 #include "drv.h"
 
-#define BRD_M_PI		3.14159265358979323846
+#define BRD_CURR_RECONSTRUCTION      TRUE
+#define BRD_M_PI		             3.14159265358979323846
 
 static uint8_t brd_status = 0;
 static float Current_U;
@@ -54,14 +55,14 @@ void brd_init(void)
     //Calculate Current Offset in ADC Counts
     Curr_Offset = (uint32_t)(ADC_CURR_OFFSET * ADC_BITS_MAX / LVPS_VOLTAGE); 
 
-    ADC_Reading();
+    ADC_Reading(0);
 }
 
 
 /* ================= Auxiliary Functions =================== */
 
 /* ================= brd handler to update dat =================== */
-void ADC_Reading(void)
+void ADC_Reading(uint8_t sec)
 {
     /* ********************************************* */
     /* ************ Load Motor Data **************** */ 
@@ -82,17 +83,74 @@ void ADC_Reading(void)
     IpmTemperature = IPM_TEMPERATURE; //No simulation for IPM Temperature... Keep it at pre-defined & fixed value
     DcBusVoltage = Vdc_Raw/VOLTAGE_AMP*ADC_STEP; //to do: Create a model for the Vdc voltage
     
-    if(ADC_CURR_GAIN > 0.0f) //Positive Gain
+    Current_U = ((float)Curr_U_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
+    Current_V = ((float)Curr_V_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
+    Current_W = ((float)Curr_W_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
+
+    if(BRD_CURR_RECONSTRUCTION == FALSE)
     {
-        Current_U = ((float)Curr_U_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
-        Current_V = ((float)Curr_V_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
-        Current_W = ((float)Curr_W_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
-    } 
-    else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+        sec = 255; //disable current reconstruction
+    }
+
+    //Current Reconstruction
+    switch(sec)
     {
-        Current_U = -((float)Curr_U_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
-        Current_V = -((float)Curr_V_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
-        Current_W = -((float)Curr_W_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
+      case 2 :
+      case 3 :
+        {
+                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
+                {
+                    Current_W = -(Current_U + Current_V);
+                } 
+                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+                {
+                    Current_U = -Current_U;
+                    Current_V = -Current_V;
+                    Current_W = -(Current_U + Current_V);
+                }
+        }
+        break;
+      case 4 :
+      case 5 :
+        {
+                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
+                {
+                    Current_U = -(Current_W + Current_V);
+                } 
+                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+                {
+                    Current_V = -Current_V;
+                    Current_W = -Current_W;
+                    Current_U = -(Current_W + Current_V);
+                }
+        }
+        break;
+      case 6 :
+      case 1 :
+        {
+                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
+                {
+                    Current_V = -(Current_W + Current_U);
+
+                } 
+                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+                {
+                    Current_U = -Current_U;
+                    Current_W = -Current_W;
+                    Current_V = -(Current_W + Current_U);
+                }
+        }
+        break;
+      default :
+        {
+                //If positive nothing changes, but if negative only invert signals (reconstruction disabled)
+                if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+                {
+                    Current_U = -Current_U;
+                    Current_W = -Current_W;
+                    Current_V = -Current_V;
+                }
+        }
     }
 }
 

@@ -72,13 +72,12 @@ typedef struct {
 
 
 
-void pmsm_initialize(PMSMParams params);
+void pmsm_initialize(PMSMParams params, float32 ts);
 void pmsm_rk4_step(
     PMSMState         *states,       // [in/out] estado atual e atualizado
     PMSMInputs        *inputs,       // [in] entradas (mantidas constantes durante Ts)
     PMSMParams        *params,       // [in] par�metros
-    PMSMOutputs       *outputs,      // [out] sa�das no final do passo (pode ser NULL)
-    real_t             Ts            // [in] per�odo de integra��o [s]
+    PMSMOutputs       *outputs       // [out] sa�das no final do passo (pode ser NULL)
 );
-void pmsm_step(float32 va, float32 vb, float32 tl, float32 ts);
+void pmsm_step(float32 va, float32 vb, float32 vc, float32 tl);
 void pmsm_get_outputs(PMSMOutputs *outputs);

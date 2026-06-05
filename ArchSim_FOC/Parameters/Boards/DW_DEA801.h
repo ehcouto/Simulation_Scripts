@@ -17,11 +17,15 @@
 
 // Board Noise Params (Current)
 #define ADC_NOISE_MEAN     0.0f
-#define ADC_NOISE_STDDEV   0.008f
+#define ADC_NOISE_STDDEV   0.006f
 
 // Board Noise Params (VBus)
 #define ADC_NOISE_MEAN_VBUS     0.0f
-#define ADC_NOISE_STDDEV_VBUS   0.005f
+#define ADC_NOISE_STDDEV_VBUS   0.004f
 
 //VDC Voltage Drop
 #define VDC_VOLTAGE_DROP   5.0f
+
+//Inverter Params
+#define INVERTER_DEADTIME     1.5E-6 //secs
+#define INVERTER_RES_EQ       0.5f //Ohm - Equivalent Resistance of conduction (IGBT & Diode) - They are considered the same for simulation purposes. 

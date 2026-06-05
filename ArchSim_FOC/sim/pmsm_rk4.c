@@ -35,13 +35,17 @@ static PMSMOutputs Outputs;
 static real_t sin_theta;
 static real_t cos_theta;
 
+static real_t Ts;
+
 static void CurrentReconstruction(PMSMOutputs *out);
 
 /* ========================= Initializacao do Motor =========================== */
-void pmsm_initialize(PMSMParams params)
+void pmsm_initialize(PMSMParams params, float32 ts)
 {
     //Load Motor Parameters
     Motor0 = params;
+
+    Ts = ts;
 
     //Initialize States & Outputs
     States.id = 0.0f;
@@ -92,8 +96,7 @@ void pmsm_rk4_step(
 	    PMSMState         *states,       // [in/out] estado atual e atualizado
 	    PMSMInputs        *inputs,       // [in]  entradas (mantidas constantes durante Ts)
 	    PMSMParams        *params,       // [in]  parametros
-	    PMSMOutputs       *outputs,      // [out] saidas no final do passo (pode ser NULL)
-	    real_t             Ts            // [in]  periodo de integracao [s]
+	    PMSMOutputs       *outputs       // [out] saidas no final do passo (pode ser NULL)
 )
 {
     real_t ts_6;
@@ -173,15 +176,21 @@ int main(void) {
 }*/
 
 /* =================== External Callback ===================== */
-void pmsm_step(float32 va, float32 vb, float32 tl, float32 ts)
+void pmsm_step(float32 v_u, float32 v_v, float32 v_w, float32 tl)
 {
+    real_t va, vb; //valpha, vbeta
+
+    //Clarke Transform (abc -> alpha-beta)  
+    va = v_u;
+    vb = (v_v - v_w) * (real_t)(1.0f/ 1.73205080757f); // 1/sqrt(3) * (v_v - v_w) para transformar de abc para alpha-beta  
+
     //Update input variables
     Inputs.vd = (va * cos_theta) + (vb * sin_theta); //vd = Park Transform from ab -> dq 
     Inputs.vq = ((-va) * sin_theta) + (vb * cos_theta); //vq = Park Transform from ab -> dq 
     Inputs.T_L = tl;
 
     //Reload motor model
-    pmsm_rk4_step(&States, &Inputs, &Motor0, &Outputs, ts);
+    pmsm_rk4_step(&States, &Inputs, &Motor0, &Outputs);
 
     //Generate 3ph Currents
     CurrentReconstruction(&Outputs);
