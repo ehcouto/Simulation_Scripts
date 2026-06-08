@@ -5,6 +5,7 @@
 
 ## Version
 
+- **v1.2:** Added Inverter Models (06/2026)
 - **v1.1:** Added different motor features and ADC sensor simulation (06/2026)
 - **v1.0:** Initial Release (05/2026)
 
