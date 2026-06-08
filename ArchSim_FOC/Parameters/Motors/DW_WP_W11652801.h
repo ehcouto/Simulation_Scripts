@@ -20,3 +20,7 @@ void set_motor(uint32_t motor_id)
     mcp_px[motor_id] = &mcp_dw_circ_W11652801;
     fsp_px[motor_id] = &fsp_dw_circ_W11652801;
 }
+
+
+//Simulation Parameters (Locally changing only for Simulation)
+#define PARAMETERS_STARTUP_OL_THALIGN_DURATION       33.0f

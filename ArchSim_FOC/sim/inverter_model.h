@@ -3,6 +3,11 @@
 
 #include "C_Extensions.h"
 
+#define DIRECTION_UP     1
+#define DIRECTION_DOWN  -1
+
+//#define SIMULATE_DEADTIME_EFFECT_PWM_INVERTER
+
 typedef struct {
     float32 Va;
     float32 Vb;
@@ -20,9 +25,12 @@ typedef struct {
 } InverterInput;
 
 
-void inverter_model_init(float32 Tpwm);
+void inverter_model_init(float32 Tpwm, float32 t_sim);
 PhaseVoltages inverter_model_ideal(InverterInput inv_in);
 PhaseVoltages inverter_model_dt_losses(InverterInput inv_in);
 PhaseVoltages inverter_model_delay(InverterInput inv_in);
+PhaseVoltages inverter_model_pwm(InverterInput inv_in);
+
+float32 Inverter_Get_Data(uint8 index);
 
 #endif

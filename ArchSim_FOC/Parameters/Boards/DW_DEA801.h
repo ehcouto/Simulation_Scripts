@@ -27,5 +27,5 @@
 #define VDC_VOLTAGE_DROP   5.0f
 
 //Inverter Params
-#define INVERTER_DEADTIME     1.5E-6 //secs
+#define INVERTER_DEADTIME     1.5E-6f //secs
 #define INVERTER_RES_EQ       0.5f //Ohm - Equivalent Resistance of conduction (IGBT & Diode) - They are considered the same for simulation purposes. 

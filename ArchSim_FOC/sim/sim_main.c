@@ -33,6 +33,7 @@
 //Ideal               ---> 0
 //Deadtime + losses   ---> 1
 //dT + losses + delay ---> 2
+//Real PWM Model      ---> 3
 #define INVERTER_TYPE  2
 
 
@@ -41,14 +42,19 @@
 #include "Board_Sel.h"
 
 
-float t_array[]    = {0.1f, 6.0f};  //Time in Seconds
+float t_array[]    = {0.01f, 10.0f};  //Time in Seconds
 float spd_array[]  = {3000.0f, 2500.0f}; //Motor Speed in RPM
 
-#define SIM_TIME_SEC     10.0f //Simulation Time in Seconds
+#define SIM_TIME_SEC     15.0f //Simulation Time in Seconds
 
 #define FOC_FREQ_HZ      (uint32_t)MOTOR1_FAST_LOOP_FREQUENCY
 #define SPEED_FREQ_HZ    (uint32_t)MOTOR1_SLOW_LOOP_FREQUENCY
-#define MOTOR_FREQ_HZ    (uint32_t)(FOC_FREQ_HZ * 10U)
+
+#if INVERTER_TYPE == 3
+    #define MOTOR_FREQ_HZ    (uint32_t)(FOC_FREQ_HZ * 265U) //Real PWM Simulation required more data points
+#else
+    #define MOTOR_FREQ_HZ    (uint32_t)(FOC_FREQ_HZ * 10U) 
+#endif
 
 #define TS_SIM           (1.0f / MOTOR_FREQ_HZ)
 #define TS_FOC           (1.0f / FOC_FREQ_HZ)
@@ -74,6 +80,7 @@ PhaseVoltages inverter_output;
 InverterInput inverter_input;
 
 static void system_init(void);
+static void archsim_init(void);
 static void speed_command(const float *t_array, const float *spd_array, uint32_t n_points, float t_now);
 static void Packing_Data_Csv(void);
 static void load_torque(void);
@@ -84,11 +91,11 @@ FILE *csv;
 
 int main(void)
 {
-    /* --- Initialize Functions --- */
-    system_init();
+    /* --- Initialize SIL Simulation --- */
+    archsim_init();
 
-    /* --- Initialize PMSM Model Module --- */
-    pmsm_initialize(Motor, TS_SIM);
+    /* --- Initialize System --- */
+    system_init();
 
     /* --- loop Begin --- */
     while (sim_time < SIM_TIME_SEC)
@@ -157,31 +164,6 @@ int main(void)
 /* ================ System Init Functions =================== */
 void system_init(void)
 {
-    /* --- Initialize CSV File Pointer --- */
-    csv = fopen("sim_output.csv", "wb");
-    fprintf(csv, "t,iu,iv,iw,SpeedRef,SpeedEst,SpeedReal,id,id_m,iq,iq_m,vd,vq,torque,tq_m,tq_load,theta,th_m\n");
-
-    /* --- Initialize the Motor --- */
-    Motor.Rs = RS; //ohm phase
-    Motor.Ld = LD; // H
-    Motor.Lq = LQ; // H
-    Motor.Phi = LAMBDA_M; // Wb   
-    Motor.p = POLE_PAIRS; //pole pairs   
-    Motor.J_Inv = 1.0f / INERTIA_J;
-    Motor.B = VISC_B; 
-
-    /* --- Initialize Variables --- */
-    foc_counter = 0;
-    sim_time = 0.0f;
-    t_l      = 0.0f;
-
-     /* --- Initialize Speed Command Parameters --- */
-    Speed_Ref.mc_motorIndex = MOTOR;
-    Speed_Ref.mc_sprefmec = 0.0f; //rpm
-    Speed_Ref.mc_ramp_duration = 0.01f; 
-    Speed_Ref.mc_rampin = MOTOR_RAMP_RPMS; //rpm/s 
-
-    inverter_model_init(TS_FOC);
     brd_init();
     
     mcInit.mcDrvTurnOnInrushRelay = brdTurnOnInrushRelay;
@@ -215,8 +197,51 @@ void system_init(void)
     mcAddMotor(&mcMpvInit);
     
     mpv[MOTOR].control_state = INIT;
-	mcEnableMotorControl(MOTOR);
+
+    //Setting Different Parameters for Simulation
+    mpv[MOTOR].p.startup.ol.thalign_duration = PARAMETERS_STARTUP_OL_THALIGN_DURATION; /*In simulation long time for alignment is not required. 
+                                                                                        keeping 100ms in simulation just to check signals & Controllers performance */
+	
+    //Enable Motor Control Module
+    mcEnableMotorControl(MOTOR);
 }
+
+
+
+
+void archsim_init(void)
+{
+    /* --- Initialize CSV File Pointer --- */
+    csv = fopen("sim_output.csv", "wb");
+    fprintf(csv, "t,iu,iv,iw,SpeedRef,SpeedEst,SpeedReal,id,id_m,iq,iq_m,vd,vq,torque,tq_m,tq_load,theta,th_m\n");
+
+    /* --- Initialize the Motor --- */
+    Motor.Rs = RS; //ohm phase
+    Motor.Ld = LD; // H
+    Motor.Lq = LQ; // H
+    Motor.Phi = LAMBDA_M; // Wb   
+    Motor.p = POLE_PAIRS; //pole pairs   
+    Motor.J_Inv = 1.0f / INERTIA_J;
+    Motor.B = VISC_B; 
+
+    /* --- Initialize Variables --- */
+    foc_counter = 0;
+    sim_time = 0.0f;
+    t_l      = 0.0f;
+
+     /* --- Initialize Speed Command Parameters --- */
+    Speed_Ref.mc_motorIndex = MOTOR;
+    Speed_Ref.mc_sprefmec = 0.0f; //rpm
+    Speed_Ref.mc_ramp_duration = 0.01f; 
+    Speed_Ref.mc_rampin = MOTOR_RAMP_RPMS; //rpm/s 
+
+    inverter_model_init(TS_FOC, TS_SIM);
+    
+    /* --- Initialize PMSM Model Module --- */
+    pmsm_initialize(Motor, TS_SIM);
+}
+
+
 
 
 /* ================= Speed Command Function =================== */
@@ -281,6 +306,8 @@ void run_inverter_model(void)
         inverter_output = inverter_model_dt_losses(inverter_input);  
     #elif(INVERTER_TYPE == 2)
         inverter_output = inverter_model_delay(inverter_input);   
+    #elif(INVERTER_TYPE == 3)
+        inverter_output = inverter_model_pwm(inverter_input);   
     #endif
 }
 
