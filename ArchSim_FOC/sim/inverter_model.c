@@ -350,6 +350,7 @@ void dt_insert_real(uint8 desired, uint8 *sx_top, float32 *dt_x)
     */
     #else //Deadtime Effect Disabled (Load Top Commands w/ desired Duty Cycle)
     *sx_top = desired;
+    *dt_x = 0.0f;
     #endif
 }
 

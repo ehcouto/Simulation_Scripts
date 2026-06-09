@@ -14,8 +14,13 @@
 #include "Board_Sel.h"
 #include "drv.h"
 
+#define MATHCALC__SATURATE_DIRECT(lim_inf, value, lim_sup)                                          \
+ (((value) >= (lim_sup)) ? (lim_sup) : ( ((value) <= (lim_inf)) ? (lim_inf) : (value) )) 
+
 #define BRD_CURR_RECONSTRUCTION      TRUE
 #define BRD_M_PI		             3.14159265358979323846
+
+static DutyCycleStates DutyCycle;
 
 static uint8_t brd_status = 0;
 static float Current_U;
@@ -55,14 +60,19 @@ void brd_init(void)
     //Calculate Current Offset in ADC Counts
     Curr_Offset = (uint32_t)(ADC_CURR_OFFSET * ADC_BITS_MAX / LVPS_VOLTAGE); 
 
-    ADC_Reading(0);
+    //Initializing Duties
+    DutyCycle.U = 0.0f;
+    DutyCycle.V = 0.0f;
+    DutyCycle.W = 0.0f;
+
+    ADC_Reading();
 }
 
 
 /* ================= Auxiliary Functions =================== */
 
 /* ================= brd handler to update dat =================== */
-void ADC_Reading(uint8_t sec)
+void ADC_Reading()
 {
     /* ********************************************* */
     /* ************ Load Motor Data **************** */ 
@@ -76,82 +86,6 @@ void ADC_Reading(uint8_t sec)
     Current_Sensor(&Curr_V_Raw, Motor_Data.Iv); //Returns Raw Data in ADC Counts
     Current_Sensor(&Curr_W_Raw, Motor_Data.Iw); //Returns Raw Data in ADC Counts
     Voltage_Sensor(&Vdc_Raw); //Returns Raw Data in ADC Counts
-    
-    /* ********************************************* */
-    /* ************** SW Routine ***************** */ 
-    /* ********************************************* */
-    IpmTemperature = IPM_TEMPERATURE; //No simulation for IPM Temperature... Keep it at pre-defined & fixed value
-    DcBusVoltage = Vdc_Raw/VOLTAGE_AMP*ADC_STEP; //to do: Create a model for the Vdc voltage
-    
-    Current_U = ((float)Curr_U_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
-    Current_V = ((float)Curr_V_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
-    Current_W = ((float)Curr_W_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
-
-    if(BRD_CURR_RECONSTRUCTION == FALSE)
-    {
-        sec = 255; //disable current reconstruction
-    }
-
-    //Current Reconstruction
-    switch(sec)
-    {
-      case 2 :
-      case 3 :
-        {
-                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
-                {
-                    Current_W = -(Current_U + Current_V);
-                } 
-                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
-                {
-                    Current_U = -Current_U;
-                    Current_V = -Current_V;
-                    Current_W = -(Current_U + Current_V);
-                }
-        }
-        break;
-      case 4 :
-      case 5 :
-        {
-                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
-                {
-                    Current_U = -(Current_W + Current_V);
-                } 
-                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
-                {
-                    Current_V = -Current_V;
-                    Current_W = -Current_W;
-                    Current_U = -(Current_W + Current_V);
-                }
-        }
-        break;
-      case 6 :
-      case 1 :
-        {
-                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
-                {
-                    Current_V = -(Current_W + Current_U);
-
-                } 
-                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
-                {
-                    Current_U = -Current_U;
-                    Current_W = -Current_W;
-                    Current_V = -(Current_W + Current_U);
-                }
-        }
-        break;
-      default :
-        {
-                //If positive nothing changes, but if negative only invert signals (reconstruction disabled)
-                if(ADC_CURR_GAIN < 0.0f) //Negative Gain
-                {
-                    Current_U = -Current_U;
-                    Current_W = -Current_W;
-                    Current_V = -Current_V;
-                }
-        }
-    }
 }
 
 
@@ -239,6 +173,14 @@ void brdGetData(float *current_u, float *current_v, float *current_w, float *dc_
 
 
 
+DutyCycleStates brdGetDuties(void)
+{
+    return DutyCycle;
+}
+
+
+
+
 /**
 * @brief Enable Phase U related PWM output
 * 
@@ -294,7 +236,17 @@ void brdPwmEnablePhaseUVW(void)
 */
 void brdSetPwmDuties(float dutyU, float dutyV, float dutyW)
 {
+    float U_lim, V_lim, W_lim;
 
+    //Apply Duty Cycle Limitation
+    U_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyU, DUTY_CYCLE_LIMIT);
+    V_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyV, DUTY_CYCLE_LIMIT);
+    W_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyW, DUTY_CYCLE_LIMIT);
+
+    // Set Suty cycles
+    DutyCycle.U = U_lim;
+    DutyCycle.V = V_lim;
+    DutyCycle.W = W_lim;
 }
 
 
@@ -321,7 +273,7 @@ void brdTurnOffInrushRelay(void)
 {
 
 }
-
+ 
 /**
 * @brief map adc channels
 * 
@@ -331,7 +283,17 @@ void brdTurnOffInrushRelay(void)
 */
 void brdMapAdcChannels(uint8_t sec)
 {
-
+    if((sec == 255) &&
+       (ADC_CURR_GAIN < 0.0f)) //Negative Gain
+    {
+        //If positive nothing changes, but if negative only invert signals (reconstruction disabled)
+            if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+            {
+                Current_U = -Current_U;
+                Current_W = -Current_W;
+                Current_V = -Current_V;
+            }
+    }
 }
 
 
@@ -344,7 +306,75 @@ void brdMapAdcChannels(uint8_t sec)
 */
 void brdSampleCurrentsUVW(uint8_t sec)
 {
+/* ********************************************* */
+    /* ************** SW Routine ***************** */ 
+    /* ********************************************* */
+    IpmTemperature = IPM_TEMPERATURE; //No simulation for IPM Temperature... Keep it at pre-defined & fixed value (25C)
+    DcBusVoltage = Vdc_Raw/VOLTAGE_AMP*ADC_STEP; //to do: Create a model for the Vdc voltage
+    
+    Current_U = ((float)Curr_U_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
+    Current_V = ((float)Curr_V_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
+    Current_W = ((float)Curr_W_Raw - (float)Curr_Offset)/(float)CURRENT_AMP*(float)ADC_STEP;
 
+    if(BRD_CURR_RECONSTRUCTION == FALSE)
+    {
+        sec = 255;
+    }
+
+    //Current Reconstruction
+    switch(sec)
+    {
+      case 2 :
+      case 3 :
+        {
+                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
+                {
+                    Current_W = -(Current_U + Current_V);
+                } 
+                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+                {
+                    Current_U = -Current_U;
+                    Current_V = -Current_V;
+                    Current_W = -(Current_U + Current_V);
+                }
+        }
+        break;
+      case 4 :
+      case 5 :
+        {
+                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
+                {
+                    Current_U = -(Current_W + Current_V);
+                } 
+                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+                {
+                    Current_V = -Current_V;
+                    Current_W = -Current_W;
+                    Current_U = -(Current_W + Current_V);
+                }
+        }
+        break;
+      case 6 :
+      case 1 :
+        {
+                if(ADC_CURR_GAIN > 0.0f) //Positive Gain
+                {
+                    Current_V = -(Current_W + Current_U);
+
+                } 
+                else if(ADC_CURR_GAIN < 0.0f) //Negative Gain
+                {
+                    Current_U = -Current_U;
+                    Current_W = -Current_W;
+                    Current_V = -(Current_W + Current_U);
+                }
+        }
+        break;
+      default :
+        {
+            brdMapAdcChannels(sec);
+        }
+    }
 }
 
 
@@ -472,8 +502,9 @@ bool brdGetDCBusOpenStatus(void)
 
 bool brdGetEncoderData(float *_pos, float *_sp)
 {
+    *_pos = 0.0001f * *_sp; //Do nothing.. Just to remove warning - Not used.
     return(false);
-}
+} 
 
 
 void brdShortCircuitBottomTransistors(void)

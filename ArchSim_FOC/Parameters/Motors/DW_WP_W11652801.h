@@ -7,7 +7,7 @@
 #define LD         0.079f
 #define LQ         0.079f   
 #define LAMBDA_M   0.0753f
-#define INERTIA_J  8.7E-6f
+#define INERTIA_J  1.74E-5f
 #define VISC_B     4.6E-5f
 #define POLE_PAIRS 3U
 #define TL_MAX     0.216f

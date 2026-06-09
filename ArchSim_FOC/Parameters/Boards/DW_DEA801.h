@@ -29,3 +29,7 @@
 //Inverter Params
 #define INVERTER_DEADTIME     1.5E-6f //secs
 #define INVERTER_RES_EQ       0.5f //Ohm - Equivalent Resistance of conduction (IGBT & Diode) - They are considered the same for simulation purposes. 
+
+
+//Duty Cycle Limitation
+#define DUTY_CYCLE_LIMIT      0.95f

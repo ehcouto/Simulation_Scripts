@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 plt.close('all')
 import pandas as pd
 import os
+import numpy as np
 
 
 csv_path = os.path.join("Debug", "sim_output.csv")
@@ -11,6 +12,16 @@ csv_path = os.path.join("Debug", "sim_output.csv")
 # Lê o CSV com header
 df = pd.read_csv(csv_path, dtype=float)
 
+print("*** Simulation Results *** \n")
+print("Total Time Simulation = {:.0f} Secs".format(df["t"].iloc[-1]))    
+max_speed = df["SpeedRef"].max()
+print("Max Speed Reached = {:.1f} RPM".format(max_speed))   
+print("Max Peak Current Reached = {:.3f} A peak".format(df["iq"].max()))  
+print("Max Current Reached = {:.3f} A rms".format(df["iq"].max()/np.sqrt(2.0)))    
+max_torque = df["torque"].max() 
+print("Max Shaft Torque = {:.1f} mNm".format(max_torque*1000.0))
+print("Max Shaft Power = {:.1f} W".format(max_torque*max_speed * 2.0 * np.pi / 60.0)) 
+      
 plt.figure(figsize=(14, 8))
 
 #Speed Data
@@ -58,13 +69,14 @@ plt.grid(True)
 plt.legend()
 plt.title("Motor Torque [Nm]", fontsize=10, fontweight="bold")
 
-#Rotor Position
+#Duty Cycles
 plt.subplot(3, 2, 6)
-plt.plot(df["t"], df["theta"], label="theta rotor")
-plt.plot(df["t"], df["th_m"], label="theta rotor (model)")
+plt.plot(df["t"], df["dc_u"], label="Duty Cycle U")
+plt.plot(df["t"], df["dc_v"], label="Duty Cycle V")
+plt.plot(df["t"], df["dc_w"], label="Duty Cycle W")
 plt.grid(True)
 plt.legend()
-plt.title("Rotor Position [Deg]", fontsize=10, fontweight="bold")
+plt.title("Duty Cycle", fontsize=10, fontweight="bold")
 
 plt.tight_layout()
 plt.show()

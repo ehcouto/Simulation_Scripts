@@ -5,6 +5,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef struct {
+    float U;
+    float V;
+    float W;
+} DutyCycleStates;
+
 #define MOTOR0          0
 
 void brd_init(void);
@@ -37,6 +43,7 @@ bool brdGetEncoderData(float *_pos, float *_sp);
 void brdShortCircuitBottomTransistors(void);
 
 void brdGetData(float *current_u, float *current_v, float *current_w, float *dc_bus_voltage, float *ipm_temperature);
-void ADC_Reading(uint8_t sec);
+void ADC_Reading(void);
+DutyCycleStates brdGetDuties(void);
 
 #endif
