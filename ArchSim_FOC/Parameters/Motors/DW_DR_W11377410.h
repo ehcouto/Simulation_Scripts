@@ -21,6 +21,8 @@ void set_motor(uint32_t motor_id)
     fsp_px[motor_id] = &fsp_dw_drain_W11377410;
 }
 
+#define LOAD_TYPE     LOAD_TYPE_HYDRAULIC_SIMPLE
+#define K_HYD         TL_MAX /(MAX_SPEED*MAX_SPEED)
 
 //Simulation Parameters (Locally changing only for Simulation)
 #define PARAMETERS_STARTUP_OL_THALIGN_DURATION       33.0f

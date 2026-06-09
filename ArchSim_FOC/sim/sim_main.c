@@ -28,7 +28,7 @@
 //Plot @ 1Khz       ---> 0
 //Plot @ FOC Freq   ---> 1
 //Plot @ Motor Freq ---> 2
-#define PLOT_TYPE     1
+#define PLOT_TYPE     0
 
 //Ideal               ---> 0
 //Deadtime + losses   ---> 1
@@ -42,16 +42,16 @@
 #include "Board_Sel.h"
 
 
-float t_array[]    = {0.01f, 10.0f};  //Time in Seconds
-float spd_array[]  = {3000.0f, 2500.0f}; //Motor Speed in RPM
+float t_array[]    = {0.01f, 8.1f, 14.0f};  //Time in Seconds
+float spd_array[]  = {3500.0f, 1800.0f, 3000.0f}; //Motor Speed in RPM
 
-#define SIM_TIME_SEC     15.0f //Simulation Time in Seconds
+#define SIM_TIME_SEC     20.0f //Simulation Time in Seconds
 
 #define FOC_FREQ_HZ      (uint32_t)MOTOR1_FAST_LOOP_FREQUENCY
 #define SPEED_FREQ_HZ    (uint32_t)MOTOR1_SLOW_LOOP_FREQUENCY
 
 #if INVERTER_TYPE == 3
-    #define MOTOR_FREQ_HZ    (uint32_t)(FOC_FREQ_HZ * 265U) //Real PWM Simulation required more data points
+    #define MOTOR_FREQ_HZ    (uint32_t)(FOC_FREQ_HZ * 50U) //Real PWM Simulation required more data points
 #else
     #define MOTOR_FREQ_HZ    (uint32_t)(FOC_FREQ_HZ * 10U) 
 #endif
@@ -278,7 +278,19 @@ void speed_command(const float *t_array, const float *spd_array, uint32_t n_poin
 /* ================= Load Torque Generatuion =================== */
 void load_torque(void)
 {
-    t_l = TL_MAX * (mpv[MOTOR].v.spref / MAX_SPEED);
+    float32 speed_rpm;
+
+    speed_rpm = mpv[MOTOR].v.spref;
+
+#if(LOAD_TYPE == LOAD_TYPE_EMPTY)
+    t_l = 0.0f;
+#elif((LOAD_TYPE == LOAD_TYPE_SPD_LINEAR))
+    t_l = TL_MAX * (speed_rpm / MAX_SPEED);
+#elif((LOAD_TYPE == LOAD_TYPE_SPD_QUADRATIC))
+    t_l = TL_K_QD * (speed_rpm * speed_rpm);
+#elif((LOAD_TYPE == LOAD_TYPE_HYDRAULIC_SIMPLE))
+    t_l = K_HYD * (speed_rpm * speed_rpm);
+#endif
 }
 
 
