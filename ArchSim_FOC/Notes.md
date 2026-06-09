@@ -5,6 +5,7 @@
 
 ## Version
 
+- **v1.3:** Improved PWM Inverter Model + Architecture Updates (06/2026)
 - **v1.2:** Added Inverter Models (06/2026)
 - **v1.1:** Added different motor features and ADC sensor simulation (06/2026)
 - **v1.0:** Initial Release (05/2026)
@@ -30,6 +31,5 @@
 
 ## Next Steps to Implement:
 
-- More Realistic Inverter Model to simulate the PWM effects in the motor control.
 - Inverter Non-Linearities Simulation.
 - VBus Voltage model to include voltage ripple in the simulation. 
