@@ -2,7 +2,7 @@
  * Simulation Architecture (Software-in-the-Loop) - Beko FOC Simulation
  * Author: EDUARDO HENRIQUE COUTO
  * Requisit: C99, <math.h>
- * Date: May/2026
+ * Date: 2026
  *
  * Notes:
  *  - It is used with GCC compiler (Winlibs) and C99 standard.
@@ -76,6 +76,8 @@ static mcMpvInit_t mcMpvInit;
 
 static McSpeedReq_t Speed_Ref;
 static float32 t_l;
+
+static DutyCycleStates HW_Duty;
 
 //Inverter Variables
 PhaseVoltages inverter_output;
@@ -231,6 +233,10 @@ void archsim_init(void)
     sim_time = 0.0f;
     t_l      = 0.0f;
 
+    HW_Duty.U = 0.0f;
+    HW_Duty.V = 0.0f;
+    HW_Duty.W = 0.0f;
+
      /* --- Initialize Speed Command Parameters --- */
     Speed_Ref.mc_motorIndex = MOTOR;
     Speed_Ref.mc_sprefmec = 0.0f; //rpm
@@ -300,14 +306,12 @@ void load_torque(void)
 
 void run_inverter_model(void)
 {
-    DutyCycleStates duties;
-
-    duties = brdGetDuties();
+    HW_Duty = brdGetDuties();
 
     //Load Duties
-    inverter_input.duty_u = duties.U;
-    inverter_input.duty_v = duties.V;
-    inverter_input.duty_w = duties.W;
+    inverter_input.duty_u = HW_Duty.U;
+    inverter_input.duty_v = HW_Duty.V;
+    inverter_input.duty_w = HW_Duty.W;
 
     //Load Currents from motor model
     inverter_input.i_u = Motor_Out.Iu;
@@ -350,9 +354,9 @@ void Packing_Data_Csv(void)
     tq_m = Motor_Out.Te;
     torque = iq * mpv[MOTOR].p.phys.Kt * 0.70710678118654752440f;
     tq_load = t_l;
-    dc_u = mpv[MOTOR].v.duvw_comp.u;
-    dc_v = mpv[MOTOR].v.duvw_comp.v;
-    dc_w = mpv[MOTOR].v.duvw_comp.w;
+    dc_u = HW_Duty.U;
+    dc_v = HW_Duty.V;
+    dc_w = HW_Duty.W;
     vd = mpv[MOTOR].v.vdq.d;
     vq = mpv[MOTOR].v.vdq.q;
 
