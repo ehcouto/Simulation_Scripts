@@ -4,3 +4,8 @@
 /Python/MCSim/__pycache__
 /ArchSim_FOC/Debug/sim_output.csv
 /ArchSim_FOC/Debug/SimArch_foc.exe
+Python/FOC_Full_sim/__pycache__/ClrkPark.cpython-314.pyc
+Python/FOC_Full_sim/__pycache__/Drain_Params_W11377410.cpython-314.pyc
+Python/FOC_Full_sim/__pycache__/IPMSM.cpython-314.pyc
+Python/FOC_Full_sim/__pycache__/PI.cpython-314.pyc
+Python/FOC_Full_sim/__pycache__/Wash_Params_W20007335.cpython-314.pyc

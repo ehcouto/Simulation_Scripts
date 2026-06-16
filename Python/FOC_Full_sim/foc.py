@@ -12,6 +12,8 @@ import Wash_Params_W20007335 as motor_params
 #----------------------------------------------
 #------------ Simulation Settings -------------
 #----------------------------------------------
+print("Motor Selected =  ", motor_params.Motor_PN)
+
 T_sim = 2.0
 Fs = 8000.0
 Fslow = 1000.0

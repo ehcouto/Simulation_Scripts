@@ -1,4 +1,7 @@
 # Motor parameters
+
+Motor_PN = "W11377410"
+
 Rs = 47.0         # Stator resistance (Ohm)
 Ld = 0.14 
 Lq = 0.14   # Inductance (H)
