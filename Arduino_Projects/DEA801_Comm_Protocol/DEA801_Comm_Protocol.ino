@@ -54,6 +54,7 @@ Date: June/2026
 #define SYSTICK_MS    100  //ms
 #define SET_BIT(x)    (1 << x)
 #define TX_LENGHT     (TX_SIZE-1)*sizeof(uint8_t)
+#define RX_LENGHT     (RX_SIZE-1)*sizeof(uint8_t)
 
 /* ##################################################
 #################### Variables ######################
@@ -71,6 +72,7 @@ volatile bool sendFlag = false;
 uint8_t txBuffer[TX_SIZE];
 uint8_t rxBuffer[RX_SIZE];
 uint8_t indexRx;
+uint8_t rsvByte1;
 bool frameReady;
 
 
@@ -159,7 +161,17 @@ void loop()
   // RX Receiving Monitor
   RXFrameBuilder();
 
-  led_status = rxBuffer[5];
+  // Process RX Data Frame
+  if (frameReady)
+  {
+    frameReady = false;
+        
+    uint32_t fault_mcu = (rxBuffer[4]<<24) | (rxBuffer[3]<<16) | (rxBuffer[2]<<8) | (rxBuffer[1]);
+    rsvByte1 =  (uint8_t)(fault_mcu & 0x01000000U);
+
+    //Enable_TX = rxBuffer[5]; //Controlling TX from external uC.
+  }
+
 
   // TX Sending Monitor (every systick interruption)
   if (sendFlag) 
@@ -178,13 +190,6 @@ void loop()
 
   // Time Processing
   timeProcessing();
-
-  // Process RX Data Frame
-  if (frameReady)
-  {
-    frameReady = false;
-    //processFrame();
-  }
 
   // Update LED Outputs
   if(led_status == true)
@@ -211,15 +216,8 @@ ISR(TIMER1_COMPA_vect)
   //Activate Communication.
   sendFlag = true;
 
-  // //Manage LED Status... 
-  // if(led_status == true)
-  // {
-  //   led_status = false;
-  // }
-  // else
-  // {
-  //   led_status = true;
-  // }
+  //Manage LED Status... 
+  led_status = !led_status;
 
   //Increase Time
   Time_Cnt++;
@@ -242,7 +240,7 @@ void buildTXPackage()
     txBuffer[6]  = (uint8_t)(drain_speed >> 8);    // Drain_Speed[1]
     txBuffer[7]  = (uint8_t)(selectComponent);     // Select Component
     txBuffer[8]  = (uint8_t)(0x00U);               // Heater Cfg
-    txBuffer[9]  = (uint8_t)(0x00U);               // rsvbyte1
+    txBuffer[9]  = (uint8_t)(rsvByte1);            // rsvbyte1
     txBuffer[10] = (uint8_t)(Time_Sec);            // rsvbyte2
     
     //Calc buffer CRC
@@ -284,10 +282,6 @@ void RXFrameBuilder(void)
                 {
                     frameReady = true;
                 }
-                else
-                {
-                  //Serial.println("RX Frame Failed!");
-                }
 
                 // Reset Index...
                 indexRx = 0;
@@ -309,9 +303,9 @@ bool validateFrame(void)
     }
 
     // CRC Check
-    crc_calc = appCalcCRC(rxBuffer, RX_SIZE - 1);
+    crc_calc = appCalcCRC(rxBuffer, RX_LENGHT);
 
-    if(crc_calc == rxBuffer[RX_SIZE - 1])
+    if(crc_calc == rxBuffer[RX_SIZE-1])
     {
       response = true;
     }
@@ -365,11 +359,6 @@ void timeProcessing(void)
           Time_Sec = 0;
         }
       
-        if(Time_Sec >= 30)
-        {
-          Enable_TX = false;
-        }
-
         //Serial.print("Min: ");
         //Serial.print(Time_Min);
         //Serial.print("  Secs: ");
