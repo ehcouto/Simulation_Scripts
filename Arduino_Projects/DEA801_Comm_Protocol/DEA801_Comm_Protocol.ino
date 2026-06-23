@@ -172,7 +172,14 @@ void loop()
     ((uint32_t)rxBuffer[2] << 8)  |
     ((uint32_t)rxBuffer[1]);
     
-    rsvByte1 =  (uint8_t)(fault_mcu & 0x01000000U);
+    if(fault_mcu & 0x01000000U)
+    {
+      rsvByte1 =  1U;
+    }
+    else
+    {
+      rsvByte1 = rxBuffer[21]; //idxAcu
+    }
 
     Enable_TX = (bool)rxBuffer[5]; //Controlling TX from external uC.
   }
