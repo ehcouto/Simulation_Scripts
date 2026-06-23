@@ -166,10 +166,15 @@ void loop()
   {
     frameReady = false;
         
-    uint32_t fault_mcu = (rxBuffer[4]<<24) | (rxBuffer[3]<<16) | (rxBuffer[2]<<8) | (rxBuffer[1]);
+   uint32_t fault_mcu =
+    ((uint32_t)rxBuffer[4] << 24) |
+    ((uint32_t)rxBuffer[3] << 16) |
+    ((uint32_t)rxBuffer[2] << 8)  |
+    ((uint32_t)rxBuffer[1]);
+    
     rsvByte1 =  (uint8_t)(fault_mcu & 0x01000000U);
 
-    //Enable_TX = rxBuffer[5]; //Controlling TX from external uC.
+    Enable_TX = (bool)rxBuffer[5]; //Controlling TX from external uC.
   }
 
 
