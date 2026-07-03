@@ -10,3 +10,4 @@ Python/FOC_Full_sim/__pycache__/IPMSM.cpython-314.pyc
 Python/FOC_Full_sim/__pycache__/PI.cpython-314.pyc
 Python/FOC_Full_sim/__pycache__/Wash_Params_W20007335.cpython-314.pyc
 C_Template/main.exe
+ArchSim_FOC/sim_output.csv

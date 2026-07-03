@@ -46,4 +46,7 @@ void brdGetData(float *current_u, float *current_v, float *current_w, float *dc_
 void ADC_Reading(void);
 DutyCycleStates brdGetDuties(void);
 
+void SetIPMFault(void);
+bool IsPWMEnabled(void);
+
 #endif

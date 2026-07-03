@@ -33,6 +33,8 @@ static uint32_t Vdc_Raw;
 static uint32_t Curr_Offset;
 static float DcBusVoltage;
 static float IpmTemperature;
+static bool PWM_Enabled;
+static bool IPMFaultStatus;
 
 static PMSMOutputs Motor_Data;
 
@@ -64,6 +66,9 @@ void brd_init(void)
     DutyCycle.U = 0.0f;
     DutyCycle.V = 0.0f;
     DutyCycle.W = 0.0f;
+
+    PWM_Enabled = false;
+    IPMFaultStatus = false;
 
     ADC_Reading();
 }
@@ -175,7 +180,22 @@ void brdGetData(float *current_u, float *current_v, float *current_w, float *dc_
 
 DutyCycleStates brdGetDuties(void)
 {
-    return DutyCycle;
+    DutyCycleStates hw_duty;
+
+    if(PWM_Enabled == true)
+    {
+        hw_duty.U = DutyCycle.U;
+        hw_duty.V = DutyCycle.V;
+        hw_duty.W = DutyCycle.W;
+    }
+    else
+    {
+        hw_duty.U = 0.0f;
+        hw_duty.V = 0.0f;
+        hw_duty.W = 0.0f; 
+    }
+
+    return(hw_duty);
 }
 
 
@@ -238,10 +258,10 @@ void brdSetPwmDuties(float dutyU, float dutyV, float dutyW)
 {
     float U_lim, V_lim, W_lim;
 
-    //Apply Duty Cycle Limitation
-    U_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyU, DUTY_CYCLE_LIMIT);
-    V_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyV, DUTY_CYCLE_LIMIT);
-    W_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyW, DUTY_CYCLE_LIMIT);
+        //Apply Duty Cycle Limitation
+        U_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyU, DUTY_CYCLE_LIMIT);
+        V_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyV, DUTY_CYCLE_LIMIT);
+        W_lim = MATHCALC__SATURATE_DIRECT((1.0f - DUTY_CYCLE_LIMIT), dutyW, DUTY_CYCLE_LIMIT);
 
     // Set Suty cycles
     DutyCycle.U = U_lim;
@@ -452,25 +472,25 @@ float brdGetIpmTemperature(void)
 
 bool brdGetIpmFaultOutState(void)
 {
-    return(false);
+    return(IPMFaultStatus);
 }
 
 
 void brdResetIpmFaultOutState(void)
 {
-
+    IPMFaultStatus = false;
 }
 
 
 void brdPwmEnable(void)
 {
-
+    PWM_Enabled = true;
 }
 
 
 void brdPwmDisable(void)
 {
-
+    PWM_Enabled = false;
 }
 
 
@@ -510,4 +530,19 @@ bool brdGetEncoderData(float *_pos, float *_sp)
 void brdShortCircuitBottomTransistors(void)
 {
 
+}
+
+
+
+
+void SetIPMFault(void)
+{
+    IPMFaultStatus = true;
+}
+
+
+
+bool IsPWMEnabled(void)
+{
+    return(PWM_Enabled);
 }

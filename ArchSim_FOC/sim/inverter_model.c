@@ -255,13 +255,25 @@ PhaseVoltages inverter_model_pwm(InverterInput inv_in)
 
 PhaseVoltages inverter_model_deadtime(InverterInput inv_in)
 {
-    float32 vdc, temp;
+    float32 vdc, temp, Da_eff, Db_eff, Dc_eff;
     PhaseVoltages v;
 
     //Apply Deadtime to the duty cycle signals
-    float32 Da_eff = apply_deadtime(inv_in.duty_u, inv_in.i_u);
-    float32 Db_eff = apply_deadtime(inv_in.duty_v, inv_in.i_v);
-    float32 Dc_eff = apply_deadtime(inv_in.duty_w, inv_in.i_w);
+    if((inv_in.duty_u != 0.0f) &&
+       (inv_in.duty_v != 0.0f) &&
+       (inv_in.duty_w != 0.0f))
+    {
+        Da_eff = apply_deadtime(inv_in.duty_u, inv_in.i_u);
+        Db_eff = apply_deadtime(inv_in.duty_v, inv_in.i_v);
+        Dc_eff = apply_deadtime(inv_in.duty_w, inv_in.i_w);
+    }
+    else
+    {
+        Da_eff = 0.0f;
+        Db_eff = 0.0f;
+        Dc_eff = 0.0f;
+    }
+
 
     //Calc Vn (Motor Virtual Neutral)
     temp = (Da_eff + Db_eff + Dc_eff) / 3.0f;

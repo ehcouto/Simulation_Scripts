@@ -79,6 +79,10 @@ static float32 t_l;
 
 static DutyCycleStates HW_Duty;
 
+static uint16_t Time_Sec_Cnt;
+static uint32_t Time_mSec;
+static uint8_t Time_Sec;
+
 //Inverter Variables
 PhaseVoltages inverter_output;
 InverterInput inverter_input;
@@ -89,6 +93,7 @@ static void speed_command(const float *t_array, const float *spd_array, uint32_t
 static void Packing_Data_Csv(void);
 static void load_torque(void);
 static void run_inverter_model(void);
+static void Time_Counter(void);
 
 /* --- CSV File Pointer --- */
 FILE *csv;
@@ -135,6 +140,8 @@ int main(void)
 
             //Run Low Frequency Handler (Speed Loop)
             mcMxHandlerSL(MOTOR);
+
+            Time_Counter();
 
             //Plot Data at FOC Frequency
             #if PLOT_TYPE == 0
@@ -247,6 +254,10 @@ void archsim_init(void)
     
     /* --- Initialize PMSM Model Module --- */
     pmsm_initialize(Motor, TS_SIM);
+
+    Time_Sec_Cnt = 0;
+    Time_Sec = 0;
+    Time_mSec = 0;
 }
 
 
@@ -331,6 +342,14 @@ void run_inverter_model(void)
     #elif(INVERTER_TYPE == 3)
         inverter_output = inverter_model_pwm(inverter_input);   
     #endif
+
+    if(IsPWMEnabled() == false)
+    {
+        inverter_output.Va = 0.0f;
+        inverter_output.Vb = 0.0f;
+        inverter_output.Vc = 0.0f;
+        t_l = 0.0f;
+    }
 }
 
 
@@ -382,3 +401,17 @@ void Packing_Data_Csv(void)
             dc_w);
 }
 
+
+void Time_Counter(void)
+{
+    //This Function can be used for debugging, or including different simulation algorithms...
+
+    Time_Sec_Cnt++;
+    Time_mSec++;
+
+    if(Time_Sec_Cnt >= 1000U)
+    {
+        Time_Sec_Cnt = 0;
+        Time_Sec++;
+    }
+}
